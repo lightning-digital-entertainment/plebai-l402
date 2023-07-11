@@ -9,6 +9,7 @@ const morgan_1 = __importDefault(require("morgan"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
 const api_1 = __importDefault(require("./api"));
+const middlewares_1 = __importDefault(require("./middlewares"));
 exports.app = (0, express_1.default)();
 exports.app.use((0, morgan_1.default)('dev'));
 exports.app.use((0, helmet_1.default)());
@@ -20,7 +21,6 @@ exports.app.get('/', (req, res) => {
     });
 });
 exports.app.use('/api/v1', api_1.default);
-// app.use(middlewares.notFound);
-// app.use(middlewares.errorHandler);
+exports.app.use(middlewares_1.default);
 exports.default = exports.app;
 //# sourceMappingURL=app.js.map

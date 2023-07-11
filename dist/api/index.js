@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // tslint:disable-next-line:no-console
 const express_1 = require("express");
 const emojis_1 = __importDefault(require("./emojis"));
+const l402_1 = __importDefault(require("./l402"));
 const router = (0, express_1.Router)();
 router.get('/', (req, res) => {
     res.json({
@@ -13,5 +14,6 @@ router.get('/', (req, res) => {
     });
 });
 router.use('/emojis', emojis_1.default);
+router.use('/l402', l402_1.default);
 exports.default = router;
 //# sourceMappingURL=index.js.map
