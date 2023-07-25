@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
   });
 });
 
-app.use('/api/v1', router);
+app.use('/v1', router);
 
-app.use(middlewares);
+// app.use(middlewares);
 export default app;

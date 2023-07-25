@@ -37,15 +37,20 @@ const openai_1 = require("langchain/chat_models/openai");
 const schema_1 = require("langchain/schema");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-// console.log('env: %o',process.env.OPENAI_API_KEY )
-// openAIApiKey: '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'
-const chat = new openai_1.ChatOpenAI({ temperature: 0.5, });
+const chat = new openai_1.ChatOpenAI({ temperature: 0.5 });
 const l402 = (0, express_1.Router)();
-l402.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const response = yield chat.call([
-        new schema_1.HumanMessage("Translate this sentence from English to French. I love programming."),
-    ]);
-    res.json(response);
+l402.get('/chat/completion', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const status = true;
+    let response;
+    if (status) {
+        response = yield chat.call([
+            new schema_1.HumanMessage("Translate this sentence from English to French. I love programming."),
+        ]);
+        res.json(response);
+    }
+    else {
+        res.setHeader('WWW-Authenticate', 'macroon:invoice').status(402).send('');
+    }
 }));
 exports.default = l402;
 //# sourceMappingURL=l402.js.map

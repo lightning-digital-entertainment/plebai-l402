@@ -3,11 +3,24 @@
   "version": "1.2.0",
   "description": "Backend to access API through L402",
   "main": "dist/index.js",
+  "nodemonConfig": {
+    "watch": [
+      "index"
+    ],
+    "ext": "ts",
+    "ignore": [
+      "*.test.ts"
+    ],
+    "delay": "3",
+    "execMap": {
+      "ts": "ts-node"
+    }
+  },
   "scripts": {
     "prebuild": "tslint -c tslint.json -p tsconfig.json --fix",
     "build": "tsc",
     "prestart": "npm run build",
-    "start": "node .",
+    "start": "nodemon .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,12 +31,19 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@getzep/zep-js": "^0.4.1",
+    "bufio": "^1.2.0",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^10.0.0",
     "express": "^4.18.2",
     "helmet": "^7.0.0",
     "langchain": "^0.0.106",
-    "morgan": "^1.10.0"
+    "lsat-js": "^2.0.6",
+    "macaroon": "^3.0.4",
+    "morgan": "^1.10.0",
+    "serpapi": "^1.1.1",
+    "youtube-transcript": "^1.0.6"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",
