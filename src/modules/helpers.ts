@@ -1,6 +1,6 @@
 import { LightningAddress } from "alby-tools";
 import { InvoiceResponse } from "../typings/invoice";
-import { Lsat, Identifier, Caveat, getRawMacaroon, verifyMacaroonCaveats, expirationSatisfier } from 'lsat-js'
+import { Lsat, Identifier, Caveat, getRawMacaroon, verifyMacaroonCaveats, expirationSatisfier } from './l402js'
 import * as Macaroon from 'macaroon'
 import { sha256 } from "js-sha256";
 

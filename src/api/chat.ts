@@ -10,7 +10,7 @@ import { Memory, Message, ZepClient } from '@getzep/zep-js';
 import { PromptTemplate } from "langchain/prompts";
 import { ConversationChain } from "langchain/chains";
 import { DynamicTool, SerpAPI } from "langchain/tools";
-import { Lsat, expirationSatisfier, verifyMacaroonCaveats } from 'lsat-js'
+import { Lsat } from 'lsat-js'
 import { getLsatToChallenge, vetifyLsatToken } from '../modules/helpers';
 import { sha256 } from 'js-sha256';
 

@@ -34,7 +34,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requestApiAccess = exports.vetifyLsatToken = exports.getLsatToChallenge = void 0;
 const alby_tools_1 = require("alby-tools");
-const lsat_js_1 = require("lsat-js");
+const l402js_1 = require("./l402js");
 const Macaroon = __importStar(require("macaroon"));
 const js_sha256_1 = require("js-sha256");
 function getLsatToChallenge(requestBody, amtinsats) {
@@ -42,7 +42,7 @@ function getLsatToChallenge(requestBody, amtinsats) {
         const ln = new alby_tools_1.LightningAddress(process.env.LIGHTNING_ADDRESS);
         yield ln.fetch();
         const invoice = yield ln.requestInvoice({ satoshi: amtinsats });
-        const identifier = new lsat_js_1.Identifier({
+        const identifier = new l402js_1.Identifier({
             paymentHash: Buffer.from(invoice.paymentHash, 'hex'),
         });
         const macaroon = Macaroon.newMacaroon({
@@ -51,9 +51,9 @@ function getLsatToChallenge(requestBody, amtinsats) {
             identifier: identifier.toString(),
             location: process.env.MAC_LOCATION,
         });
-        const lsat = lsat_js_1.Lsat.fromMacaroon((0, lsat_js_1.getRawMacaroon)(macaroon), invoice.paymentRequest);
-        const caveat = lsat_js_1.Caveat.decode('bodyHash=' + js_sha256_1.sha256.update((JSON.stringify(requestBody))));
-        const caveatExpiry = new lsat_js_1.Caveat({
+        const lsat = l402js_1.Lsat.fromMacaroon((0, l402js_1.getRawMacaroon)(macaroon), invoice.paymentRequest);
+        const caveat = l402js_1.Caveat.decode('bodyHash=' + js_sha256_1.sha256.update((JSON.stringify(requestBody))));
+        const caveatExpiry = new l402js_1.Caveat({
             condition: 'expiration',
             // add amount of time to "Date.now()"
             value: Date.now() + 900000
@@ -69,11 +69,11 @@ exports.getLsatToChallenge = getLsatToChallenge;
 function vetifyLsatToken(lsatToken, requestBody) {
     try {
         const bodyhash = '' + js_sha256_1.sha256.update((JSON.stringify(requestBody)));
-        const lsat = lsat_js_1.Lsat.fromToken(lsatToken);
+        const lsat = l402js_1.Lsat.fromToken(lsatToken);
         // Check to see if expires or preimage/hash not satisfied
         if (lsat.isExpired() || !lsat.isSatisfied)
             return false;
-        const result = (0, lsat_js_1.verifyMacaroonCaveats)(lsat.baseMacaroon, process.env.SIGNING_KEY, lsat_js_1.expirationSatisfier);
+        const result = (0, l402js_1.verifyMacaroonCaveats)(lsat.baseMacaroon, process.env.SIGNING_KEY, l402js_1.expirationSatisfier);
         // check if macaroon is not tampered
         if (!result)
             return false;
