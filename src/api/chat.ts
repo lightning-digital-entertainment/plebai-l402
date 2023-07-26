@@ -9,6 +9,10 @@ import { ZepMemory } from "langchain/memory/zep";
 import { Memory, Message, ZepClient } from '@getzep/zep-js';
 import { PromptTemplate } from "langchain/prompts";
 import { ConversationChain } from "langchain/chains";
+import { DynamicTool, SerpAPI } from "langchain/tools";
+import { Lsat, expirationSatisfier, verifyMacaroonCaveats } from 'lsat-js'
+import { getLsatToChallenge, vetifyLsatToken } from '../modules/helpers';
+import { sha256 } from 'js-sha256';
 
 dotenv.config();
 const wordRegex = /\s+/g;
@@ -38,11 +42,58 @@ const createChatCompletion = (content: string | null, role: string | null, finis
 
 const l402 = Router();
 
+l402.post('/testing', async (req: Request, res: Response) => {
+
+  console.log(req.headers);
+
+  if (req.headers.authorization) {
+
+    // validate Auth and confirm
+    if (!(vetifyLsatToken(req.headers.authorization, req.body))) return lsatChallenge(req.body, res);
+
+    // All good to execute
+    res.status(200).send('Success');
+
+  } else {
+
+    // no auth found. so create macroon, invoice and send it back to client with 402
+    return lsatChallenge(req.body, res);
+  }
+  /*
+
+
+
+
+  const tools = [
+    new DynamicTool({
+      name: "SERP-YOUTUBE",
+      description:
+        "call this to search and get youtube URL ",
+      func: async () => "baz",
+    }),
+    new DynamicTool({
+      name: "BAR",
+      description:
+        "call this to get the value of bar. input should be an empty string.",
+      func: async () => "baz1",
+    }),
+  ];
+
+  class SerpApiUrlTester extends SerpAPI {
+    testThisUrl(): string {
+      return this.buildUrl("search", this.params, this.baseUrl);
+    }
+  }
+  */
+});
+
 l402.post('/completions', async (req: Request, res: Response) => {
 
   const body = req.body;
 
   console.log('Body: ', body);
+
+
 
   const headers = {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -196,7 +247,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   }
 
-  // res.setHeader('WWW-Authenticate', 'macroon:invoice').status(402).send('');
+
 
   sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
   sendData('[DONE]');
@@ -255,5 +306,10 @@ function splitStringIntoChunks(str: string, chunkSize: number): string[] {
   }
 
   return chunks;
+}
+
+async function lsatChallenge(requestBody: string, res: Response): Promise<Response<any, Record<string, any>>> {
+  const lsat:Lsat = await getLsatToChallenge(requestBody, parseInt(process.env.SATS_AMOUNT, 10));
+  return res.setHeader('WWW-Authenticate', lsat.toChallenge()).status(402).send('');
 }
 

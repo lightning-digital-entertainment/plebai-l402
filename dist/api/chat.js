@@ -42,6 +42,7 @@ const zep_1 = require("langchain/memory/zep");
 const zep_js_1 = require("@getzep/zep-js");
 const prompts_1 = require("langchain/prompts");
 const chains_1 = require("langchain/chains");
+const helpers_1 = require("../modules/helpers");
 dotenv.config();
 const wordRegex = /\s+/g;
 let sessionId = "";
@@ -65,6 +66,46 @@ const createChatCompletion = (content, role, finishReason) => {
     };
 };
 const l402 = (0, express_1.Router)();
+l402.post('/testing', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(req.headers);
+    if (req.headers.authorization) {
+        // validate Auth and confirm
+        if (!((0, helpers_1.vetifyLsatToken)(req.headers.authorization, req.body)))
+            return lsatChallenge(req.body, res);
+        // All good to execute
+        res.status(200).send('Success');
+    }
+    else {
+        // no auth found. so create macroon, invoice and send it back to client with 402
+        return lsatChallenge(req.body, res);
+    }
+    /*
+  
+  
+  
+  
+    const tools = [
+      new DynamicTool({
+        name: "SERP-YOUTUBE",
+        description:
+          "call this to search and get youtube URL ",
+        func: async () => "baz",
+      }),
+      new DynamicTool({
+        name: "BAR",
+        description:
+          "call this to get the value of bar. input should be an empty string.",
+        func: async () => "baz1",
+      }),
+    ];
+  
+    class SerpApiUrlTester extends SerpAPI {
+      testThisUrl(): string {
+        return this.buildUrl("search", this.params, this.baseUrl);
+      }
+    }
+    */
+}));
 l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const body = req.body;
     console.log('Body: ', body);
@@ -155,7 +196,6 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         const chain = new chains_1.ConversationChain({ llm: chat, prompt, memory });
         yield chain.call({ input: body.messages[body.messages.length - 1].content });
     }
-    // res.setHeader('WWW-Authenticate', 'macroon:invoice').status(402).send('');
     sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
     sendData('[DONE]');
     res.end();
@@ -182,5 +222,11 @@ function splitStringIntoChunks(str, chunkSize) {
         chunks.push(currentChunk);
     }
     return chunks;
+}
+function lsatChallenge(requestBody, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const lsat = yield (0, helpers_1.getLsatToChallenge)(requestBody, parseInt(process.env.SATS_AMOUNT, 10));
+        return res.setHeader('WWW-Authenticate', lsat.toChallenge()).status(402).send('');
+    });
 }
 //# sourceMappingURL=chat.js.map
