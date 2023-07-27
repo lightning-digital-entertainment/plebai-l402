@@ -10,9 +10,9 @@ import { Memory, Message, ZepClient } from '@getzep/zep-js';
 import { PromptTemplate } from "langchain/prompts";
 import { ConversationChain } from "langchain/chains";
 import { DynamicTool, SerpAPI } from "langchain/tools";
-import { Lsat } from 'lsat-js'
+import { Lsat } from '../modules/l402js'
 import { getLsatToChallenge, vetifyLsatToken } from '../modules/helpers';
-import { sha256 } from 'js-sha256';
+
 
 dotenv.config();
 const wordRegex = /\s+/g;
@@ -59,32 +59,7 @@ l402.post('/testing', async (req: Request, res: Response) => {
     // no auth found. so create macroon, invoice and send it back to client with 402
     return lsatChallenge(req.body, res);
   }
-  /*
 
-
-
-
-  const tools = [
-    new DynamicTool({
-      name: "SERP-YOUTUBE",
-      description:
-        "call this to search and get youtube URL ",
-      func: async () => "baz",
-    }),
-    new DynamicTool({
-      name: "BAR",
-      description:
-        "call this to get the value of bar. input should be an empty string.",
-      func: async () => "baz1",
-    }),
-  ];
-
-  class SerpApiUrlTester extends SerpAPI {
-    testThisUrl(): string {
-      return this.buildUrl("search", this.params, this.baseUrl);
-    }
-  }
-  */
 });
 
 l402.post('/completions', async (req: Request, res: Response) => {
@@ -93,6 +68,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   console.log('Body: ', body);
 
+  console.log(req.headers.host);
 
 
   const headers = {
@@ -110,6 +86,34 @@ l402.post('/completions', async (req: Request, res: Response) => {
     res.write(`data: ${data}\n\n`);
   };
 
+  sendData(JSON.stringify(createChatCompletion(null, 'assistant', null)));
+
+
+  if (body.system_purpose === 'Developer' || body.system_purpose === 'Teacher') {
+
+    body.stream = false;
+
+    const headerRequest = {
+      'Content-Type': 'application/json',
+    }
+
+    const response = await fetch(process.env.LLAMA_7B,  { headers: headerRequest, method: 'POST', body: JSON.stringify(body) } )
+
+    const token = await response.json();
+
+    console.log(token.choices[0].message);
+    sendData(JSON.stringify(createChatCompletion( token.choices[0].message.content , null, null)));
+    sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+    sendData('[DONE]');
+    res.end();
+
+    return;
+
+
+  }
+
+
+
   let summaryTokens='';
   const chat = new ChatOpenAI({temperature: 0.5, modelName: 'gpt-3.5-turbo-16k-0613',
     streaming: true,
@@ -125,7 +129,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   });
 
-  sendData(JSON.stringify(createChatCompletion(null, 'assistant', null)));
+
 
   let link='';
 

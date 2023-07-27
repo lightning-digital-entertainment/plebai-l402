@@ -255,7 +255,7 @@ export class Lsat extends bufio.Struct {
       this.invoice,
       `Can't create a challenge without a payment request/invoice`
     )
-    const challenge = `token="${this.baseMacaroon}", invoice="${this.invoice}"`
+    const challenge = `macaroon="${this.baseMacaroon}", invoice="${this.invoice}"`
     return `L402 ${challenge}`
   }
 

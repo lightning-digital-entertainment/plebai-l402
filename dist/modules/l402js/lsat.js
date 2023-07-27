@@ -226,7 +226,7 @@ class Lsat extends bufio_1.default.Struct {
      */
     toChallenge() {
         (0, assert_1.default)(this.invoice, `Can't create a challenge without a payment request/invoice`);
-        const challenge = `token="${this.baseMacaroon}", invoice="${this.invoice}"`;
+        const challenge = `macaroon="${this.baseMacaroon}", invoice="${this.invoice}"`;
         return `L402 ${challenge}`;
     }
     toJSON() {
