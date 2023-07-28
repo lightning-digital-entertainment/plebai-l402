@@ -49,14 +49,16 @@ const webbrowser_1 = require("langchain/tools/webbrowser");
 const calculator_1 = require("langchain/tools/calculator");
 const openai_2 = require("langchain/embeddings/openai");
 const openai_3 = require("langchain/llms/openai");
+const uuid_1 = require("uuid");
 dotenv.config();
 const wordRegex = /\s+/g;
 let sessionId = "";
 const zepClient = new zep_js_1.ZepClient(process.env.ZEP_API_URL, process.env.OPENAI_API_KEY);
 const createChatCompletion = (content, role, finishReason) => {
+    const id = (0, uuid_1.v4)();
     return {
-        id: "chatcmpl-500307f7-4a6c-4c7b-8caf-6d44bfc4220b",
-        model: "gpt-4-all",
+        id: "chatcmpl-" + Buffer.from(id),
+        model: "plebai-l402",
         created: Date.now(),
         object: "chat.completion.chunk",
         choices: [
@@ -87,22 +89,29 @@ l402.post('/testing', (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 }));
 l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // included 'localhost' for local dev/test. Use ip address if you want to run locally and return 402.
+    if (!req.headers.host.startsWith('localhost') && !req.headers.authorization) {
+        // no auth found. so create macroon, invoice and send it back to client with 402
+        return lsatChallenge(req.body, res);
+    }
+    if (!req.headers.host.startsWith('localhost') && req.headers.authorization) {
+        // validate Auth and confirm
+        if (!((0, helpers_1.vetifyLsatToken)(req.headers.authorization, req.body)))
+            return lsatChallenge(req.body, res);
+    }
+    // if you are here, then it is localhost or L402 Auth passed.
     const body = req.body;
-    console.log('Body: ', body);
-    console.log(req.headers.host);
-    const headers = {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Connection': 'keep-alive',
-        'server': 'uvicorn',
-        'Cache-Control': 'no-cache',
-        'Transfer-Encoding': 'chunked'
-    };
-    res.writeHead(200, headers);
     const sendData = (data) => {
-        res.write(`event: completion \n`);
-        res.write(`data: ${data}\n\n`);
+        if (body.stream ? body.stream : false) {
+            res.write(`event: completion \n`);
+            res.write(`data: ${data}\n\n`);
+        }
     };
-    sendData(JSON.stringify(createChatCompletion(null, 'assistant', null)));
+    if (body.stream ? body.stream : false) {
+        res.writeHead(200, (0, helpers_1.sendHeaders)(true));
+        sendData(JSON.stringify(createChatCompletion(null, 'assistant', null)));
+    }
+    // This is used in plebAI.com
     if (body.system_purpose === 'Developer' || body.system_purpose === 'Teacher') {
         body.stream = false;
         const headerRequest = {
@@ -110,6 +119,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         };
         const response = yield fetch(process.env.LLAMA_7B, { headers: headerRequest, method: 'POST', body: JSON.stringify(body) });
         const token = yield response.json();
+        body.stream = true;
         console.log(token.choices[0].message);
         sendData(JSON.stringify(createChatCompletion(token.choices[0].message.content, null, null)));
         sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
@@ -117,6 +127,8 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.end();
         return;
     }
+    let summaryTokens = '';
+    // This is used in PlebAI.com
     if (body.system_purpose === 'OrangePill') {
         const model = new openai_3.OpenAI({ temperature: 0, modelName: 'davinci-search-query' });
         const chat2 = new openai_1.ChatOpenAI({ temperature: 0.5, modelName: 'gpt-4-0314',
@@ -124,7 +136,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
             callbacks: [
                 {
                     handleLLMNewToken(token) {
-                        summaryTokens = summaryTokens + ' ' + token;
+                        summaryTokens = summaryTokens + token;
                         sendData(JSON.stringify(createChatCompletion(token, null, null)));
                     },
                 },
@@ -156,13 +168,12 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.end();
         return;
     }
-    let summaryTokens = '';
     const chat = new openai_1.ChatOpenAI({ temperature: 0.5, modelName: 'gpt-3.5-turbo-16k-0613',
         streaming: true,
         callbacks: [
             {
                 handleLLMNewToken(token) {
-                    summaryTokens = summaryTokens + ' ' + token;
+                    summaryTokens = summaryTokens + token;
                     sendData(JSON.stringify(createChatCompletion(token, null, null)));
                 },
             },
@@ -188,7 +199,12 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
     const pastHistory = yield memory.loadMemoryVariables({});
     if (body.messages.length === 2) {
         try {
-            sendData(JSON.stringify(createChatCompletion('Found the Youtube video ... ' + serpResponse.video_results[0].title + '\n ', null, null)));
+            summaryTokens = 'Found the Youtube video ... ' + serpResponse.video_results[0].title
+                + ' with video length: ' + serpResponse.video_results[0].length
+                + ' with views: ' + serpResponse.video_results[0].views
+                + ' published ' + serpResponse.video_results[0].published_date
+                + ' and youtube link: ' + serpResponse.video_results[0].link + '\n ';
+            sendData(JSON.stringify(createChatCompletion(summaryTokens, null, null)));
             sendData(JSON.stringify(createChatCompletion('Searching YouTube to get the transcript.... \n', null, null)));
             if (link.length > 0) {
                 const transcript = yield youtube_transcript_1.YoutubeTranscript.fetchTranscript(link);
@@ -204,7 +220,12 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                         new schema_1.HumanMessage(chunk),
                     ]);
                 }
-                sendData(JSON.stringify(createChatCompletion('\n\n Here are suggested questions to ask: \n ', null, null)));
+                if (body.stream ? body.stream : false) {
+                    sendData(JSON.stringify(createChatCompletion('\n\n Here are suggested questions to ask and learn more about: \n ', null, null)));
+                }
+                else {
+                    summaryTokens = summaryTokens + '\n\n Here are suggested questions to ask and learn more about: \n ';
+                }
                 yield chat.call([
                     new schema_1.HumanMessage("Can you suggest five questions from this summary? " + summaryTokens),
                 ]);
@@ -226,13 +247,24 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     else {
         console.log('In else...');
-        const prompt = prompts_1.PromptTemplate.fromTemplate(' Please use transcript to answer the prompt. {history}  {input} ');
-        const chain = new chains_1.ConversationChain({ llm: chat, prompt, memory });
-        yield chain.call({ input: body.messages[body.messages.length - 1].content });
+        try {
+            const prompt = prompts_1.PromptTemplate.fromTemplate(' Please use transcript to answer the prompt. {history}  {input} ');
+            const chain = new chains_1.ConversationChain({ llm: chat, prompt, memory });
+            yield chain.call({ input: body.messages[body.messages.length - 1].content });
+        }
+        catch (error) {
+            console.log('In catch with error: %o', error);
+            sendData(JSON.stringify(createChatCompletion('\n I am not able to find any youtube video with a transcript. Can you please try with a different search? \n ', null, null)));
+        }
     }
-    sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
-    sendData('[DONE]');
-    res.end();
+    if (body.stream ? body.stream : false) {
+        sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+        sendData('[DONE]');
+        res.end();
+    }
+    else {
+        res.setHeader('Content-Type', 'application/json').send(JSON.stringify(createChatCompletion(summaryTokens, 'assistant', 'stop')));
+    }
 }));
 exports.default = l402;
 function YouTubeGetID(url) {

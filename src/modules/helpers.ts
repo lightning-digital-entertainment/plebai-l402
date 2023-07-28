@@ -26,7 +26,7 @@ export async function getLsatToChallenge(requestBody: string, amtinsats: number)
 
     const caveatExpiry = new Caveat({
       condition: 'expiration',
-      // add amount of time to "Date.now()"
+      // adding 15 mins expiry
       value: Date.now() +  900000
     })
 
@@ -79,6 +79,29 @@ export function vetifyLsatToken(lsatToken: any, requestBody: string,): boolean {
   }
 
   return true;
+}
+
+export function sendHeaders(stream: boolean): any {
+    if (stream) {
+
+          return  {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Connection': 'keep-alive',
+            'server': 'uvicorn',
+            'Cache-Control': 'no-cache',
+            'Transfer-Encoding': 'chunked'
+          };
+
+    }
+    else {
+
+          return {
+            'Content-Type': 'application/json',
+            'server': 'uvicorn',
+          };
+    }
+
+
 }
 
 

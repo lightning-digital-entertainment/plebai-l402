@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requestApiAccess = exports.vetifyLsatToken = exports.getLsatToChallenge = void 0;
+exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = void 0;
 const alby_tools_1 = require("alby-tools");
 const l402js_1 = require("./l402js");
 const Macaroon = __importStar(require("macaroon"));
@@ -55,7 +55,7 @@ function getLsatToChallenge(requestBody, amtinsats) {
         const caveat = l402js_1.Caveat.decode('bodyHash=' + js_sha256_1.sha256.update((JSON.stringify(requestBody))));
         const caveatExpiry = new l402js_1.Caveat({
             condition: 'expiration',
-            // add amount of time to "Date.now()"
+            // adding 15 mins expiry
             value: Date.now() + 900000
         });
         lsat.addFirstPartyCaveat(caveat);
@@ -93,6 +93,24 @@ function vetifyLsatToken(lsatToken, requestBody) {
     return true;
 }
 exports.vetifyLsatToken = vetifyLsatToken;
+function sendHeaders(stream) {
+    if (stream) {
+        return {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Connection': 'keep-alive',
+            'server': 'uvicorn',
+            'Cache-Control': 'no-cache',
+            'Transfer-Encoding': 'chunked'
+        };
+    }
+    else {
+        return {
+            'Content-Type': 'application/json',
+            'server': 'uvicorn',
+        };
+    }
+}
+exports.sendHeaders = sendHeaders;
 function requestApiAccess(apiPath) {
     // API key
     // API host
