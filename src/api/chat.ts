@@ -12,6 +12,11 @@ import { ConversationChain } from "langchain/chains";
 import { DynamicTool, SerpAPI } from "langchain/tools";
 import { Lsat } from '../modules/l402js'
 import { getLsatToChallenge, vetifyLsatToken } from '../modules/helpers';
+import { initializeAgentExecutorWithOptions } from "langchain/agents";
+import { WebBrowser } from "langchain/tools/webbrowser";
+import { Calculator } from "langchain/tools/calculator";
+import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import { OpenAI } from "langchain/llms/openai";
 
 
 dotenv.config();
@@ -114,6 +119,60 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
 
 
+
+  if (body.system_purpose === 'OrangePill') {
+
+
+    const model = new OpenAI({ temperature: 0, modelName: 'davinci-search-query' });
+    const chat2 = new ChatOpenAI({temperature: 0.5, modelName: 'gpt-4-0314',
+    streaming: true,
+    callbacks: [
+      {
+        handleLLMNewToken(token: string) {
+          summaryTokens=summaryTokens+ ' ' + token;
+          sendData(JSON.stringify(createChatCompletion(token, null, null)));
+        },
+      },
+    ],
+
+
+    });
+
+
+    const embeddings = new OpenAIEmbeddings();
+    const tools = [
+      new SerpAPI(process.env.SERP_API_KEY, {
+        hl: "en",
+        gl: "us",
+      }),
+      new Calculator(),
+      new WebBrowser({ model, embeddings }),
+    ];
+
+
+    try {
+
+      const executor = await initializeAgentExecutorWithOptions(tools, chat2, {
+        agentType: "chat-zero-shot-react-description",
+        returnIntermediateSteps: true,
+      });
+
+      // const input = body.messages.map((message: Message) => message.content).join(' ');
+      await executor.call({ input: body.messages[0].content + ' ' + body.messages[body.messages.length -1].content });
+
+    } catch (error) {
+      console.log('In catch with error: ', error)
+      sendData(JSON.stringify(createChatCompletion( '\n\n  Error occurred when searching for an answer. Can you retry again? ' , null, null)));
+
+    }
+
+    sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+    sendData('[DONE]');
+    res.end();
+
+    return;
+  }
+
   let summaryTokens='';
   const chat = new ChatOpenAI({temperature: 0.5, modelName: 'gpt-3.5-turbo-16k-0613',
     streaming: true,
@@ -128,6 +187,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
 
   });
+
 
 
 
@@ -197,7 +257,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
          }
 
-         sendData(JSON.stringify(createChatCompletion( '\n Here are suggested questions to ask: \n ', null, null)));
+         sendData(JSON.stringify(createChatCompletion( '\n\n Here are suggested questions to ask: \n ', null, null)));
 
          await chat.call([
           new HumanMessage(
@@ -316,4 +376,5 @@ async function lsatChallenge(requestBody: string, res: Response): Promise<Respon
   const lsat:Lsat = await getLsatToChallenge(requestBody, parseInt(process.env.SATS_AMOUNT, 10));
   return res.setHeader('WWW-Authenticate', lsat.toChallenge()).status(402).send('');
 }
+
 

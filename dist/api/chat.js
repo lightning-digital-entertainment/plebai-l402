@@ -42,7 +42,13 @@ const zep_1 = require("langchain/memory/zep");
 const zep_js_1 = require("@getzep/zep-js");
 const prompts_1 = require("langchain/prompts");
 const chains_1 = require("langchain/chains");
+const tools_1 = require("langchain/tools");
 const helpers_1 = require("../modules/helpers");
+const agents_1 = require("langchain/agents");
+const webbrowser_1 = require("langchain/tools/webbrowser");
+const calculator_1 = require("langchain/tools/calculator");
+const openai_2 = require("langchain/embeddings/openai");
+const openai_3 = require("langchain/llms/openai");
 dotenv.config();
 const wordRegex = /\s+/g;
 let sessionId = "";
@@ -111,6 +117,45 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.end();
         return;
     }
+    if (body.system_purpose === 'OrangePill') {
+        const model = new openai_3.OpenAI({ temperature: 0, modelName: 'davinci-search-query' });
+        const chat2 = new openai_1.ChatOpenAI({ temperature: 0.5, modelName: 'gpt-4-0314',
+            streaming: true,
+            callbacks: [
+                {
+                    handleLLMNewToken(token) {
+                        summaryTokens = summaryTokens + ' ' + token;
+                        sendData(JSON.stringify(createChatCompletion(token, null, null)));
+                    },
+                },
+            ],
+        });
+        const embeddings = new openai_2.OpenAIEmbeddings();
+        const tools = [
+            new tools_1.SerpAPI(process.env.SERP_API_KEY, {
+                hl: "en",
+                gl: "us",
+            }),
+            new calculator_1.Calculator(),
+            new webbrowser_1.WebBrowser({ model, embeddings }),
+        ];
+        try {
+            const executor = yield (0, agents_1.initializeAgentExecutorWithOptions)(tools, chat2, {
+                agentType: "chat-zero-shot-react-description",
+                returnIntermediateSteps: true,
+            });
+            // const input = body.messages.map((message: Message) => message.content).join(' ');
+            yield executor.call({ input: body.messages[0].content + ' ' + body.messages[body.messages.length - 1].content });
+        }
+        catch (error) {
+            console.log('In catch with error: ', error);
+            sendData(JSON.stringify(createChatCompletion('\n\n  Error occurred when searching for an answer. Can you retry again? ', null, null)));
+        }
+        sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+        sendData('[DONE]');
+        res.end();
+        return;
+    }
     let summaryTokens = '';
     const chat = new openai_1.ChatOpenAI({ temperature: 0.5, modelName: 'gpt-3.5-turbo-16k-0613',
         streaming: true,
@@ -159,7 +204,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                         new schema_1.HumanMessage(chunk),
                     ]);
                 }
-                sendData(JSON.stringify(createChatCompletion('\n Here are suggested questions to ask: \n ', null, null)));
+                sendData(JSON.stringify(createChatCompletion('\n\n Here are suggested questions to ask: \n ', null, null)));
                 yield chat.call([
                     new schema_1.HumanMessage("Can you suggest five questions from this summary? " + summaryTokens),
                 ]);
