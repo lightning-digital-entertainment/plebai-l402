@@ -18,6 +18,8 @@ import { Calculator } from "langchain/tools/calculator";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { OpenAI } from "langchain/llms/openai";
 import { v4 as uuidv4 } from 'uuid';
+import { StructuredOutputParser } from "langchain/output_parsers";
+
 
 
 dotenv.config();
@@ -91,6 +93,8 @@ l402.post('/completions', async (req: Request, res: Response) => {
   // if you are here, then it is localhost or L402 Auth passed.
 
   const body = req.body;
+
+  console.log('body: ', body);
 
   const sendData = (data: string) => {
     if (body.stream?body.stream:false) {
@@ -167,7 +171,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
     try {
 
       const executor = await initializeAgentExecutorWithOptions(tools,chat2, {
-        agentType: "chat-zero-shot-react-description",
+        agentType: "structured-chat-zero-shot-react-description",
         returnIntermediateSteps: true,
       });
 
@@ -207,9 +211,66 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   let link='';
 
+  try {
+    console.log('inside trying to get the video link ')
+    link = YouTubeGetID(body.messages[1].content);
+
+    console.log('link from content is: %o', link)
+
+  } catch (error) {
+
+    console.log('Error: ', error)
+
+  }
+
+
+  // try another way to get the link
+  if (link === '') {
+
+    try {
+
+      console.log('inside trying to get the video link using ChatpGPT')
+      const parser = StructuredOutputParser.fromNamesAndDescriptions({
+        videoID: "Youtube video ID"
+      });
+      const formatInstructions = parser.getFormatInstructions();
+
+      const prompt = new PromptTemplate({
+        template:
+          "Get the youtube video ID from this text .\n{format_instructions}\n{question}",
+        inputVariables: ["question"],
+        partialVariables: { format_instructions: formatInstructions },
+      });
+
+
+      const model = new OpenAI({ temperature: 0 });
+
+      const input = await prompt.format({
+        question: body.messages[1].content,
+      });
+      const promptResponse = await model.call(input);
+
+      console.log('Input: ', input);
+      console.log('Response: ', promptResponse);
+
+      const listResponse = await parser.parse(promptResponse);
+
+      console.log(listResponse);
+
+
+    } catch (error) {
+
+      console.log('incatch with error: ', error)
+
+    }
+
+
+
+  }
+
   const params = {
     api_key: process.env.SERP_API_KEY,
-    search_query: body.messages[1].content
+    search_query: link!==''?link:body.messages[1].content
   } satisfies YoutubeParameters;
 
   const serpResponse = await getJson("youtube", params);
@@ -222,6 +283,15 @@ l402.post('/completions', async (req: Request, res: Response) => {
   link = YouTubeGetID(link);
 
   console.log('link is: %o', link)
+
+  summaryTokens = 'Found the Youtube video ... ' + serpResponse.video_results[0].title
+  + ' with video length: ' + serpResponse.video_results[0].length
+  +  ' with views: ' + serpResponse.video_results[0].views
+  + ' published ' + serpResponse.video_results[0].published_date
+  + ' and youtube link: ' + serpResponse.video_results[0].link + '\n ';
+
+
+
 
   sessionId = link;
 
@@ -239,11 +309,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
     try {
 
-      summaryTokens = 'Found the Youtube video ... ' + serpResponse.video_results[0].title
-                      + ' with video length: ' + serpResponse.video_results[0].length
-                      +  ' with views: ' + serpResponse.video_results[0].views
-                      + ' published ' + serpResponse.video_results[0].published_date
-                      + ' and youtube link: ' + serpResponse.video_results[0].link + '\n ';
+
 
       sendData(JSON.stringify(createChatCompletion(summaryTokens , null, null)));
 
@@ -297,7 +363,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
         if (pastHistory.history === '') {
 
           const history = [
-            { role: "human", content: "Here is the summary of the transscript for youtube video  " + serpResponse.video_results[0].title + ' ' + summaryTokens }
+            { role: "human", content: "Here is the summary of the transscript for youtube video  " + summaryTokens }
           ];
 
           const messages = history.map(

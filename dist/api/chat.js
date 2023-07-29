@@ -50,6 +50,7 @@ const calculator_1 = require("langchain/tools/calculator");
 const openai_2 = require("langchain/embeddings/openai");
 const openai_3 = require("langchain/llms/openai");
 const uuid_1 = require("uuid");
+const output_parsers_1 = require("langchain/output_parsers");
 dotenv.config();
 const wordRegex = /\s+/g;
 let sessionId = "";
@@ -101,6 +102,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     // if you are here, then it is localhost or L402 Auth passed.
     const body = req.body;
+    console.log('body: ', body);
     const sendData = (data) => {
         if (body.stream ? body.stream : false) {
             res.write(`event: completion \n`);
@@ -153,7 +155,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         ];
         try {
             const executor = yield (0, agents_1.initializeAgentExecutorWithOptions)(tools, chat2, {
-                agentType: "chat-zero-shot-react-description",
+                agentType: "structured-chat-zero-shot-react-description",
                 returnIntermediateSteps: true,
             });
             // const input = body.messages.map((message: Message) => message.content).join(' ');
@@ -180,9 +182,44 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         ],
     });
     let link = '';
+    try {
+        console.log('inside trying to get the video link ');
+        link = YouTubeGetID(body.messages[1].content);
+        console.log('link from content is: %o', link);
+    }
+    catch (error) {
+        console.log('Error: ', error);
+    }
+    // try another way to get the link
+    if (link === '') {
+        try {
+            console.log('inside trying to get the video link using ChatpGPT');
+            const parser = output_parsers_1.StructuredOutputParser.fromNamesAndDescriptions({
+                videoID: "Youtube video ID"
+            });
+            const formatInstructions = parser.getFormatInstructions();
+            const prompt = new prompts_1.PromptTemplate({
+                template: "Get the youtube video ID from this text .\n{format_instructions}\n{question}",
+                inputVariables: ["question"],
+                partialVariables: { format_instructions: formatInstructions },
+            });
+            const model = new openai_3.OpenAI({ temperature: 0 });
+            const input = yield prompt.format({
+                question: body.messages[1].content,
+            });
+            const promptResponse = yield model.call(input);
+            console.log('Input: ', input);
+            console.log('Response: ', promptResponse);
+            const listResponse = yield parser.parse(promptResponse);
+            console.log(listResponse);
+        }
+        catch (error) {
+            console.log('incatch with error: ', error);
+        }
+    }
     const params = {
         api_key: process.env.SERP_API_KEY,
-        search_query: body.messages[1].content
+        search_query: link !== '' ? link : body.messages[1].content
     };
     const serpResponse = yield (0, serpapi_1.getJson)("youtube", params);
     console.log(serpResponse);
@@ -190,6 +227,11 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
     // sendData(JSON.stringify(createChatCompletion( serpResponse.video_results[0].thumbnail.static + ' \n', null, null)));
     link = YouTubeGetID(link);
     console.log('link is: %o', link);
+    summaryTokens = 'Found the Youtube video ... ' + serpResponse.video_results[0].title
+        + ' with video length: ' + serpResponse.video_results[0].length
+        + ' with views: ' + serpResponse.video_results[0].views
+        + ' published ' + serpResponse.video_results[0].published_date
+        + ' and youtube link: ' + serpResponse.video_results[0].link + '\n ';
     sessionId = link;
     const memory = new zep_1.ZepMemory({
         sessionId,
@@ -199,11 +241,6 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
     const pastHistory = yield memory.loadMemoryVariables({});
     if (body.messages.length === 2) {
         try {
-            summaryTokens = 'Found the Youtube video ... ' + serpResponse.video_results[0].title
-                + ' with video length: ' + serpResponse.video_results[0].length
-                + ' with views: ' + serpResponse.video_results[0].views
-                + ' published ' + serpResponse.video_results[0].published_date
-                + ' and youtube link: ' + serpResponse.video_results[0].link + '\n ';
             sendData(JSON.stringify(createChatCompletion(summaryTokens, null, null)));
             sendData(JSON.stringify(createChatCompletion('Searching YouTube to get the transcript.... \n', null, null)));
             if (link.length > 0) {
@@ -231,7 +268,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                 ]);
                 if (pastHistory.history === '') {
                     const history = [
-                        { role: "human", content: "Here is the summary of the transscript for youtube video  " + serpResponse.video_results[0].title + ' ' + summaryTokens }
+                        { role: "human", content: "Here is the summary of the transscript for youtube video  " + summaryTokens }
                     ];
                     const messages = history.map(({ role, content }) => new zep_js_1.Message({ role, content }));
                     const memory2 = new zep_js_1.Memory({ messages });
