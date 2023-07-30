@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // tslint:disable-next-line:no-console
 const express_1 = require("express");
 const chat_1 = __importDefault(require("./chat"));
+const images_1 = __importDefault(require("./images"));
 const router = (0, express_1.Router)();
 router.get('/', (req, res) => {
     res.json({
@@ -13,5 +14,6 @@ router.get('/', (req, res) => {
     });
 });
 router.use('/chat', chat_1.default);
+router.use('/images', images_1.default);
 exports.default = router;
 //# sourceMappingURL=index.js.map

@@ -120,4 +120,12 @@ export function requestApiAccess(apiPath: string): { headers: HeadersInit, url: 
   };
 }
 
+export function generateRandom10DigitNumber():number {
+  const min = 1000000000; // 10-digit number starting with 1
+  const max = 9999999999; // 10-digit number ending with 9
+
+  const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+  return randomNumber;
+}
+
 

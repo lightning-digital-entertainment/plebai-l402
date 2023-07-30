@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = void 0;
+exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = void 0;
 const alby_tools_1 = require("alby-tools");
 const l402js_1 = require("./l402js");
 const Macaroon = __importStar(require("macaroon"));
@@ -123,4 +123,11 @@ function requestApiAccess(apiPath) {
     };
 }
 exports.requestApiAccess = requestApiAccess;
+function generateRandom10DigitNumber() {
+    const min = 1000000000; // 10-digit number starting with 1
+    const max = 9999999999; // 10-digit number ending with 9
+    const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+    return randomNumber;
+}
+exports.generateRandom10DigitNumber = generateRandom10DigitNumber;
 //# sourceMappingURL=helpers.js.map

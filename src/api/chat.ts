@@ -22,6 +22,7 @@ import { StructuredOutputParser } from "langchain/output_parsers";
 
 
 
+
 dotenv.config();
 const wordRegex = /\s+/g;
 let sessionId = "";
@@ -51,6 +52,8 @@ const createChatCompletion = (content: string | null, role: string | null, finis
 };
 
 const l402 = Router();
+
+
 
 l402.post('/testing', async (req: Request, res: Response) => {
 
