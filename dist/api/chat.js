@@ -115,6 +115,25 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         sendData(JSON.stringify(createChatCompletion(null, 'assistant', null)));
     }
     // This is used in plebAI.com
+    if (body.system_purpose === 'HumanAI') {
+        const llm = new openai_3.OpenAI({
+            temperature: 0.5,
+            modelName: 'gpt-3.5-turbo-16k-0613',
+            streaming: true,
+            callbacks: [
+                {
+                    handleLLMNewToken(token) {
+                        sendData(JSON.stringify(createChatCompletion(token, null, null)));
+                    },
+                },
+            ],
+        });
+        const response = yield llm.predict(JSON.stringify(body.messages));
+        sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+        sendData('[DONE]');
+        res.end();
+        return;
+    }
     if (body.system_purpose === 'GenImage') {
         try {
             sendData(JSON.stringify(createChatCompletion(yield (0, createImage_1.createImage)(body.messages[body.messages.length - 1].content), null, null)));
@@ -145,7 +164,6 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         return;
     }
     let summaryTokens = '';
-    // This is used in PlebAI.com
     if (body.system_purpose === 'OrangePill') {
         const model = new openai_3.OpenAI({ temperature: 0, modelName: 'davinci-search-query' });
         const chat2 = new openai_1.ChatOpenAI({ temperature: 0.5, modelName: 'gpt-4-0314',
