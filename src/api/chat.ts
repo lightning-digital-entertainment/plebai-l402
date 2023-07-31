@@ -19,6 +19,7 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { OpenAI } from "langchain/llms/openai";
 import { v4 as uuidv4 } from 'uuid';
 import { StructuredOutputParser } from "langchain/output_parsers";
+import { createImage } from '../modules/genimage/createImage';
 
 
 
@@ -114,6 +115,29 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
 
   // This is used in plebAI.com
+
+  if (body.system_purpose === 'GenImage') {
+
+    try {
+
+      sendData(JSON.stringify(createChatCompletion( await createImage(body.messages[body.messages.length -1].content) , null, null)));
+
+    } catch (error) {
+
+      console.log(error)
+      sleep(500);
+      sendData(JSON.stringify(createChatCompletion('Unable to create image due to server issue. Please try later...' , null, null)));
+
+    }
+
+
+    sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+    sendData('[DONE]');
+    res.end();
+
+    return;
+
+  }
   if (body.system_purpose === 'Developer' || body.system_purpose === 'Teacher') {
 
 
@@ -490,3 +514,8 @@ async function lsatChallenge(requestBody: string, res: Response): Promise<Respon
 }
 
 
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}

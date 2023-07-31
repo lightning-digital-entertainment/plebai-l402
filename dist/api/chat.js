@@ -51,6 +51,7 @@ const openai_2 = require("langchain/embeddings/openai");
 const openai_3 = require("langchain/llms/openai");
 const uuid_1 = require("uuid");
 const output_parsers_1 = require("langchain/output_parsers");
+const createImage_1 = require("../modules/genimage/createImage");
 dotenv.config();
 const wordRegex = /\s+/g;
 let sessionId = "";
@@ -114,6 +115,20 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         sendData(JSON.stringify(createChatCompletion(null, 'assistant', null)));
     }
     // This is used in plebAI.com
+    if (body.system_purpose === 'GenImage') {
+        try {
+            sendData(JSON.stringify(createChatCompletion(yield (0, createImage_1.createImage)(body.messages[body.messages.length - 1].content), null, null)));
+        }
+        catch (error) {
+            console.log(error);
+            sleep(500);
+            sendData(JSON.stringify(createChatCompletion('Unable to create image due to server issue. Please try later...', null, null)));
+        }
+        sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+        sendData('[DONE]');
+        res.end();
+        return;
+    }
     if (body.system_purpose === 'Developer' || body.system_purpose === 'Teacher') {
         body.stream = false;
         const headerRequest = {
@@ -330,6 +345,11 @@ function lsatChallenge(requestBody, res) {
     return __awaiter(this, void 0, void 0, function* () {
         const lsat = yield (0, helpers_1.getLsatToChallenge)(requestBody, parseInt(process.env.SATS_AMOUNT, 10));
         return res.setHeader('WWW-Authenticate', lsat.toChallenge()).status(402).send('');
+    });
+}
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
     });
 }
 //# sourceMappingURL=chat.js.map

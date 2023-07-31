@@ -31,67 +31,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const sdwebui_1 = __importDefault(require("../modules/sdwebui"));
-const types_1 = require("../modules/types");
-const fs_1 = require("fs");
 const dotenv = __importStar(require("dotenv"));
 const express_1 = require("express");
-const form_data_1 = __importDefault(require("form-data"));
-const axios_1 = __importDefault(require("axios"));
-const uuid_1 = require("uuid");
-const helpers_1 = require("../modules/helpers");
+const createImage_1 = require("../modules/genimage/createImage");
 dotenv.config();
 const imgGen = (0, express_1.Router)();
 imgGen.post('/generations', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const client = (0, sdwebui_1.default)();
-    const id = (0, uuid_1.v4)();
     try {
-        const { images } = yield client.txt2img({
-            prompt: req.body.prompt ? req.body.prompt : 'Photo of a classic red mustang car parked in las vegas strip at night',
-            negativePrompt: '(NSFW, Chinese, deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, CyberRealistic_Negative-neg, (Chinese, deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, CyberRealistic_Negative-neg, ',
-            samplingMethod: types_1.SamplingMethod.DPMPlusPlus_2M_Karras,
-            width: 512,
-            height: 512,
-            steps: 20,
-            batchSize: 1,
-            seed: (0, helpers_1.generateRandom10DigitNumber)(),
-            restoreFaces: true,
-        });
-        images.forEach((image, i) => (0, fs_1.writeFileSync)(process.env.UPLOAD_PATH + id + `.png`, images[0], 'base64'));
         const response = {
             "created": Date.now,
             "data": [
                 {
-                    "url": yield getImageUrl('data:image/png;base64,' + images[0], id)
+                    "url": yield (0, createImage_1.createImage)(req.body.prompt)
                 }
             ]
         };
         res.setHeader('Content-Type', 'application/json').status(200).send(response);
     }
-    catch (err) {
-        console.error(err);
+    catch (error) {
         res.setHeader('Content-Type', 'application/json').status(200).send({ error: 'There is an internal server error. Please try again later' });
     }
 }));
-function getImageUrl(imageData, id) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const form = new form_data_1.default();
-        form.append('asset', (0, fs_1.createReadStream)(process.env.UPLOAD_PATH + id + `.png`));
-        form.append("name", 'current/plebai/genimg/' + id + `.png`);
-        form.append("type", "image");
-        const config = {
-            method: 'post',
-            url: process.env.UPLOAD_URL,
-            headers: Object.assign({ 'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH, 'Content-Type': 'multipart/form-data' }, form.getHeaders()),
-            data: form
-        };
-        const resp = yield axios_1.default.request(config);
-        return resp.data.data;
-    });
-}
 exports.default = imgGen;
 //# sourceMappingURL=images.js.map
