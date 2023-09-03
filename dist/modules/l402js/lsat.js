@@ -216,7 +216,7 @@ class Lsat extends bufio_1.default.Struct {
      * @returns {string}
      */
     toToken() {
-        return `LSAT ${this.baseMacaroon}:${this.paymentPreimage || ''}`;
+        return `L402 ${this.baseMacaroon}:${this.paymentPreimage || ''}`;
     }
     /**
      * @description Converts LSAT into a challenge header to return in the WWW-Authenticate response

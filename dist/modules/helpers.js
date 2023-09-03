@@ -32,11 +32,35 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = void 0;
+exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.relayIds = void 0;
 const alby_tools_1 = require("alby-tools");
 const l402js_1 = require("./l402js");
 const Macaroon = __importStar(require("macaroon"));
 const js_sha256_1 = require("js-sha256");
+const fs = __importStar(require("fs"));
+const nostr_tools_1 = require("nostr-tools");
+exports.relayIds = [
+    'wss://relay.current.fyi',
+    'wss://nostr1.current.fyi',
+    'wss://nostr-pub.wellorder.net',
+    'wss://relay.damus.io',
+    'wss://nostr-relay.wlvs.space',
+    'wss://nostr.zebedee.cloud',
+    'wss://student.chadpolytechnic.com',
+    'wss://global.relay.red',
+    'wss://nos.lol',
+    'wss://relay.primal.net',
+    'wss://nostr21.com',
+    'wss://offchain.pub',
+    'wss://relay.plebstr.com',
+    'wss://nostr.mom',
+    'wss://relay.nostr.bg',
+    'wss://nostr.oxtr.dev',
+    'wss://relay.nostr.bg',
+    'wss://no.str.cr',
+    'wss://nostr-relay.nokotaro.com',
+    'wss://relay.nostr.wirednet.jp'
+];
 function getLsatToChallenge(requestBody, amtinsats) {
     return __awaiter(this, void 0, void 0, function* () {
         const ln = new alby_tools_1.LightningAddress(process.env.LIGHTNING_ADDRESS);
@@ -130,4 +154,51 @@ function generateRandom10DigitNumber() {
     return randomNumber;
 }
 exports.generateRandom10DigitNumber = generateRandom10DigitNumber;
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function readRandomRow(filePath) {
+    try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const lines = content.trim().split('\n');
+        if (lines.length === 0) {
+            return null;
+        }
+        const numberOfLines = content.split('\n');
+        const randomIndex = getRandomInt(1, numberOfLines.length);
+        return lines[randomIndex];
+    }
+    catch (err) {
+        console.error('Error reading the file:', err);
+        return null;
+    }
+}
+exports.readRandomRow = readRandomRow;
+function publishRelays(event) {
+    exports.relayIds.forEach(function (item) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log('publishing on', item);
+            try {
+                yield publishRelay(item, event);
+            }
+            catch (error) {
+                console.log('in catch with error: ', error);
+            }
+        });
+    });
+}
+exports.publishRelays = publishRelays;
+function publishRelay(relayUrl, event) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const pubrelay = (0, nostr_tools_1.relayInit)(relayUrl);
+            yield pubrelay.connect();
+            const pub = pubrelay.publish(event);
+        }
+        catch (e) {
+            console.log('in catch with error: ', e);
+        }
+    });
+}
+exports.publishRelay = publishRelay;
 //# sourceMappingURL=helpers.js.map

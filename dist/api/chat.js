@@ -52,10 +52,12 @@ const openai_3 = require("langchain/llms/openai");
 const uuid_1 = require("uuid");
 const output_parsers_1 = require("langchain/output_parsers");
 const createImage_1 = require("../modules/genimage/createImage");
+const zep_js_2 = require("@getzep/zep-js");
+const vivekdoc_1 = require("../vivekdoc");
 dotenv.config();
 const wordRegex = /\s+/g;
 let sessionId = "";
-const zepClient = new zep_js_1.ZepClient(process.env.ZEP_API_URL, process.env.OPENAI_API_KEY);
+// const zepClient = new ZepClient(process.env.ZEP_API_URL, process.env.OPENAI_API_KEY);
 const createChatCompletion = (content, role, finishReason) => {
     const id = (0, uuid_1.v4)();
     return {
@@ -76,6 +78,93 @@ const createChatCompletion = (content, role, finishReason) => {
     };
 };
 const l402 = (0, express_1.Router)();
+l402.post('/medical2023', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside medical2023');
+    const client = yield zep_js_2.ZepClient.init(process.env.ZEP_API_URL);
+    const collection = yield client.document.getCollection(process.env.MEDICAL_COLLECTION_NAME);
+    console.log(req.body.content);
+    let searchResult = '';
+    try {
+        const searchResults = yield collection.search({
+            text: req.body.content,
+        }, 5);
+        console.log(`Found ${searchResults.length} documents matching query '${req.body.content}'`);
+        // printResults(searchResults);
+        searchResult = (0, vivekdoc_1.getResults)(searchResults);
+    }
+    catch (error) {
+        console.log(error);
+    }
+    const llm = new openai_1.ChatOpenAI({
+        temperature: 0.5,
+        modelName: 'gpt-3.5-turbo-16k-0613',
+        streaming: false
+    });
+    console.log('Searchresult: ', searchResult);
+    const tools = [
+        new tools_1.SerpAPI(process.env.SERP_API_KEY, {
+            hl: "en",
+            gl: "us",
+        }),
+    ];
+    const chatChain = new openai_1.ChatOpenAI({ modelName: "gpt-3.5-turbo-16k-0613", temperature: 0 });
+    const executor = yield (0, agents_1.initializeAgentExecutorWithOptions)(tools, chatChain, {
+        agentType: "openai-functions",
+        verbose: true,
+    });
+    const result = yield executor.run(' Use this as an sample information I found to answer user input ' + searchResult + '. Here is my input: ' + req.body.content);
+    console.log('executor: ', result);
+    const systemplate = "You are now an AI modeled after a medical practioner, If the patient's age and gender are not provided, please ask for this information first. Based on the information provided please answer the user question. Please consider both traditional and holistic approaches, and list potential side effects or risks associated with each recommendation. ";
+    const systemMessagePrompt = prompts_1.SystemMessagePromptTemplate.fromTemplate(systemplate);
+    const humanTemplate = "{input}";
+    const humanMessagePrompt = prompts_1.HumanMessagePromptTemplate.fromTemplate(humanTemplate);
+    const prompt = prompts_1.ChatPromptTemplate.fromPromptMessages([
+        systemMessagePrompt,
+        humanMessagePrompt
+    ]);
+    const chain = new chains_1.ConversationChain({ llm, prompt });
+    const response = yield chain.call({ input: req.body.content + ' Use this as an sample information I found to answer user input ```' + result + '``` ' });
+    response.response = response.response + "\n\nDisclaimer: The answers provided by this Artificial Intelligence system are intended solely for reference and informational purposes. They should not be construed as professional medical advice, diagnosis, or treatment. Reliance on any information provided by this system is solely at the user's risk. These answers are not a substitute for the expertise and judgment of healthcare professionals and are not to be considered as the definitive medical opinion or as legally binding for the providers involved. In the event of a medical emergency, contact emergency services immediately.  ";
+    console.log(response);
+    res.send(response);
+}));
+l402.post('/vivek2024', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside Vivek2024');
+    const client = yield zep_js_2.ZepClient.init(process.env.ZEP_API_URL);
+    const collection = yield client.document.getCollection(process.env.COLLECTION_NAME);
+    console.log(req.body.content);
+    let searchResult = '';
+    try {
+        const searchResults = yield collection.search({
+            text: 'Vivek Ramaswamy ' + req.body.content,
+        }, 5);
+        console.log(`Found ${searchResults.length} documents matching query '${req.body.content}'`);
+        // printResults(searchResults);
+        searchResult = (0, vivekdoc_1.getResults)(searchResults);
+    }
+    catch (error) {
+        console.log(error);
+    }
+    const llm = new openai_1.ChatOpenAI({
+        temperature: 0.5,
+        modelName: 'gpt-3.5-turbo-16k-0613',
+        streaming: false
+    });
+    console.log('Searchresult: ', searchResult);
+    const systemplate = "You are now an AI modeled after Vivek Ramaswamy, a US presidential candidate. User can ask you about Vivek Ramswamy political positions, views, or any related inquiries. Do not answer any other questions. If provided, you interpret relevant documents to give context to user answers.  Given the political landscape, let's engage respectfully. You would appreciate feedback from the user on the accuracy of my answers to ensure our dialogue remains meaningful. You will always conclude the response by asking, 'Did I convince you to vote for Vivek Ramaswamy?' based on the context.";
+    const systemMessagePrompt = prompts_1.SystemMessagePromptTemplate.fromTemplate(systemplate);
+    const humanTemplate = "{input}";
+    const humanMessagePrompt = prompts_1.HumanMessagePromptTemplate.fromTemplate(humanTemplate);
+    const prompt = prompts_1.ChatPromptTemplate.fromPromptMessages([
+        systemMessagePrompt,
+        humanMessagePrompt
+    ]);
+    const chain = new chains_1.ConversationChain({ llm, prompt });
+    const response = yield chain.call({ input: searchResult + ' ' + req.body.content });
+    response.response = response.response + "\n\nDISCLAIMER: This automated bot is not affiliated with, endorsed by, or connected to Vivek's Campaign in any manner. It has been independently developed by <@687296261128192086>, utilizing Vivek's publicly available content from sources such as YouTube videos, podcasts, and other internet data.  ";
+    console.log(response);
+    res.send(response);
+}));
 l402.post('/testing', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log(req.headers);
     if (req.headers.authorization) {
@@ -90,7 +179,49 @@ l402.post('/testing', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         return lsatChallenge(req.body, res);
     }
 }));
+l402.post('/vivek/youtube', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const collectionInput = req.body.collection;
+    const client = yield zep_js_2.ZepClient.init(process.env.ZEP_API_URL);
+    const collection = yield client.document.getCollection(collectionInput);
+    const transcript = yield youtube_transcript_1.YoutubeTranscript.fetchTranscript(req.body.link);
+    const extractedTextsArray = transcript.map((data) => data.text);
+    const extractedText = extractedTextsArray.join(' ');
+    // const chunks = naiveSplitText(req.body.text, 100);
+    const chunks = splitStringIntoChunks(extractedText, 500);
+    const filteredChunks = chunks.filter(str => str.trim() !== '');
+    // console.log(filteredChunks);
+    const documents = filteredChunks.map((chunk) => new zep_js_2.Document({
+        content: chunk,
+        // document_id: filename, // optional document ID used in your system
+        metadata: { title: req.body.title }, // optional metadata
+    }));
+    console.log("split docs", documents);
+    console.log(`Adding ${documents.length} documents to collection ${collectionInput}`);
+    const uuids = yield collection.addDocuments(documents);
+    console.log(`Added ${uuids.length} documents to collection ${collectionInput}`);
+    res.send({ result: `Added ${uuids} documents to collection ${collectionInput}` });
+}));
+l402.post('/docstore', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const collectionInput = req.body.collection;
+    const client = yield zep_js_2.ZepClient.init(process.env.ZEP_API_URL);
+    const collection = yield client.document.getCollection(collectionInput);
+    // const chunks = naiveSplitText(req.body.text, 100);
+    const chunks = splitStringIntoChunks(req.body.text, 500);
+    const filteredChunks = chunks.filter(str => str.trim() !== '');
+    // console.log(filteredChunks);
+    const documents = filteredChunks.map((chunk) => new zep_js_2.Document({
+        content: chunk,
+        // document_id: filename, // optional document ID used in your system
+        metadata: { title: req.body.title }, // optional metadata
+    }));
+    console.log("split docs", documents);
+    console.log(`Adding ${documents.length} documents to collection ${collectionInput}`);
+    const uuids = yield collection.addDocuments(documents);
+    console.log(`Added ${uuids.length} documents to collection ${collectionInput}`);
+    res.send({ result: `Added ${uuids} documents to collection ${collectionInput}` });
+}));
 l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const zepClient = yield zep_js_2.ZepClient.init(process.env.ZEP_API_URL);
     // included 'localhost' for local dev/test. Use ip address if you want to run locally and return 402.
     if (!req.headers.host.startsWith('localhost') && !req.headers.authorization) {
         // no auth found. so create macroon, invoice and send it back to client with 402
@@ -115,6 +246,95 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         sendData(JSON.stringify(createChatCompletion(null, 'assistant', null)));
     }
     // This is used in plebAI.com
+    if (body.system_purpose === 'Vivek2024') {
+        console.log('inside Vivek');
+        const client = yield zep_js_2.ZepClient.init(process.env.ZEP_API_URL);
+        const collection = yield client.document.getCollection(process.env.COLLECTION_NAME);
+        let searchResult = '';
+        try {
+            const searchResults = yield collection.search({
+                text: body.messages[body.messages.length - 1].content,
+            }, 5);
+            console.log(`Found ${searchResults.length} documents matching query '${body.messages[body.messages.length - 1].content}'`);
+            // printResults(searchResults);
+            searchResult = (0, vivekdoc_1.getResults)(searchResults);
+        }
+        catch (error) {
+            console.log(error);
+        }
+        const llm = new openai_3.OpenAI({
+            temperature: 0.5,
+            modelName: 'gpt-3.5-turbo-16k-0613',
+            streaming: true,
+            callbacks: [
+                {
+                    handleLLMNewToken(token) {
+                        sendData(JSON.stringify(createChatCompletion(token, null, null)));
+                    },
+                },
+            ],
+        });
+        console.log('Searchresult: ', searchResult);
+        const response = yield llm.predict(searchResult + ' ' + JSON.stringify(body.messages));
+        sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+        sendData('[DONE]');
+        res.end();
+        return;
+    }
+    // This is used in plebAI.com
+    if (body.system_purpose === 'DocGPT') {
+        const collection = yield zepClient.document.getCollection(process.env.MEDICAL_COLLECTION_NAME);
+        const tools = [
+            new tools_1.SerpAPI(process.env.SERP_API_KEY, {
+                hl: "en",
+                gl: "us",
+            }),
+        ];
+        let searchResult = null;
+        try {
+            const searchResults = yield collection.search({
+                text: body.messages[body.messages.length - 1].content,
+            }, 2);
+            console.log(`Found ${searchResults.length} documents matching query '${body.messages[body.messages.length - 1].content}'`);
+            // printResults(searchResults);
+            searchResult = (0, vivekdoc_1.getResults)(searchResults);
+            console.log('Search Result: ', searchResult);
+        }
+        catch (error) {
+            console.log(error);
+        }
+        const docChat = new openai_1.ChatOpenAI({
+            temperature: 0.1,
+            modelName: 'gpt-3.5-turbo-16k-0613',
+            streaming: true,
+            callbacks: [
+                {
+                    handleLLMNewToken(token) {
+                        // console.log("New token:", token);
+                        // summaryTokens=summaryTokens+ token;
+                        sendData(JSON.stringify(createChatCompletion(token, null, null)));
+                    },
+                },
+            ],
+        });
+        const chatChain = new openai_1.ChatOpenAI({ modelName: "gpt-3.5-turbo-16k-0613", temperature: 0 });
+        const executor = yield (0, agents_1.initializeAgentExecutorWithOptions)(tools, chatChain, {
+            agentType: "chat-conversational-react-description",
+            verbose: true,
+        });
+        // const result = await executor.run(searchResult?'Use this example conversation and respond to user question  ```' + searchResult:'' +  '``` '  + body.messages);
+        const result = yield executor.run(JSON.stringify(body.messages));
+        const prompt = prompts_1.PromptTemplate.fromTemplate(body.messages[0].content + '. Use this information I found on the web if useful: ' + result + 'Here is user input:  {input} '); // ' + JSON.stringify(pastHistory.history) +   '
+        const chain = new chains_1.ConversationChain({ llm: docChat, prompt });
+        yield chain.call({ input: JSON.stringify(body.messages) });
+        if (body.messages.length === 2) {
+            sendData(JSON.stringify(createChatCompletion("\n\nDisclaimer: The answers provided by this Artificial Intelligence system are intended solely for reference and informational purposes. They should not be construed as professional medical advice, diagnosis, or treatment.  ", null, null)));
+        }
+        sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+        sendData('[DONE]');
+        res.end();
+        return;
+    }
     if (body.system_purpose === 'HumanAI') {
         const llm = new openai_3.OpenAI({
             temperature: 0.5,
@@ -135,6 +355,10 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         return;
     }
     if (body.system_purpose === 'GenImage') {
+        if (body.messages.length > 10) {
+            sendData(JSON.stringify(createChatCompletion('You have exceeded the limit...Please try again later.', null, null)));
+            return;
+        }
         try {
             sendData(JSON.stringify(createChatCompletion(yield (0, createImage_1.createImage)(body.messages[body.messages.length - 1].content), null, null)));
         }
@@ -187,12 +411,16 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
             new webbrowser_1.WebBrowser({ model, embeddings }),
         ];
         try {
-            const executor = yield (0, agents_1.initializeAgentExecutorWithOptions)(tools, chat2, {
-                agentType: "structured-chat-zero-shot-react-description",
-                returnIntermediateSteps: true,
+            const chatChain = new openai_1.ChatOpenAI({ modelName: "gpt-3.5-turbo-16k-0613", temperature: 0 });
+            const executor = yield (0, agents_1.initializeAgentExecutorWithOptions)(tools, chatChain, {
+                agentType: "chat-conversational-react-description",
+                returnIntermediateSteps: false,
             });
             // const input = body.messages.map((message: Message) => message.content).join(' ');
-            yield executor.call({ input: body.messages[0].content + ' ' + body.messages[body.messages.length - 1].content });
+            const result = yield executor.run(JSON.stringify(body.messages));
+            const prompt = prompts_1.PromptTemplate.fromTemplate(body.messages[0].content + '. Use this information I found on the web if useful: ' + result + 'Here is user input:  {input} '); // ' + JSON.stringify(pastHistory.history) +   '
+            const chain = new chains_1.ConversationChain({ llm: chat2, prompt });
+            yield chain.call({ input: JSON.stringify(body.messages) });
         }
         catch (error) {
             console.log('In catch with error: ', error);
@@ -369,5 +597,14 @@ function sleep(ms) {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });
+}
+function replaceWithVivek(input) {
+    const wordsToReplace = ["you", "your", "his"];
+    let output = input;
+    for (const word of wordsToReplace) {
+        const regex = new RegExp(`\\b${word}\\b`, "gi");
+        output = output.replace(regex, "Vivek");
+    }
+    return output;
 }
 //# sourceMappingURL=chat.js.map

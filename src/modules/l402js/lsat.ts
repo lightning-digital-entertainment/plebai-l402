@@ -241,7 +241,7 @@ export class Lsat extends bufio.Struct {
    * @returns {string}
    */
   toToken(): string {
-    return `LSAT ${this.baseMacaroon}:${this.paymentPreimage || ''}`
+    return `L402 ${this.baseMacaroon}:${this.paymentPreimage || ''}`
   }
 
   /**

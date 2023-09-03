@@ -2,6 +2,8 @@
 import { Request, Response, Router } from 'express';
 import chat from './chat';
 import images from './images'
+import { genPostImage } from '../modules/nostrimage';
+
 
 const router = Router();
 
