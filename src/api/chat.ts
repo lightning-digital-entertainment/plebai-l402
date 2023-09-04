@@ -22,6 +22,8 @@ import { StructuredOutputParser } from "langchain/output_parsers";
 import { createImage } from '../modules/genimage/createImage';
 import { Document, IDocument,ZepClient } from "@getzep/zep-js";
 import { getResults } from '../vivekdoc';
+import { TextToImageRequest } from '../modules/getimage/text-to-image';
+import { createGetImage } from '../modules/getimage/createText2Image';
 
 
 
@@ -578,7 +580,26 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
     try {
 
-      sendData(JSON.stringify(createChatCompletion( await createImage(body.messages[body.messages.length -1].content) , null, null)));
+      const prompt = body.messages[body.messages.length -1].content;
+
+      const model='icbinp-final'
+    
+      const options:Partial<TextToImageRequest> =  {
+    
+          prompt,
+          model,
+          'width':512,
+          'height':512
+    
+      }
+
+      const content = await createGetImage(options);
+
+      console.log('ImageGen: ' +body.messages[body.messages.length -1].content + ' ' + content );
+
+      sendData(JSON.stringify(createChatCompletion( content, null, null)));
+    
+      //sendData(JSON.stringify(createChatCompletion( await createImage(body.messages[body.messages.length -1].content) , null, null)));
 
     } catch (error) {
 

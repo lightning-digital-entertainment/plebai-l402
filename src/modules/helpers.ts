@@ -5,6 +5,9 @@ import * as Macaroon from 'macaroon'
 import { sha256 } from "js-sha256";
 import * as fs from 'fs';
 import { type Event as NostrEvent, relayInit } from 'nostr-tools';
+import { createReadStream, writeFileSync, unlink } from 'fs'
+import FormData from 'form-data';
+import axios from "axios";
 
 export const relayIds = [
   'wss://relay.current.fyi',
@@ -155,6 +158,14 @@ export function generateRandom10DigitNumber():number {
   return randomNumber;
 }
 
+export function generateRandom9DigitNumber():number {
+  const min = 100000000; // 9-digit number starting with 1
+  const max = 999999999; // 9-digit number ending with 9
+
+  const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+  return randomNumber;
+}
+
 function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -207,5 +218,38 @@ export async function publishRelay(relayUrl:string, event: NostrEvent) {
 
   }
 
+
+}
+
+export async function getImageUrl(id: string, outputFormat:string): Promise<string> {
+
+
+  const form = new FormData();
+  form.append('asset', createReadStream(process.env.UPLOAD_PATH + id + `.` + outputFormat));
+  form.append("name", 'current/plebai/genimg/' + id + `.` + outputFormat);
+  form.append("type", "image");
+
+  const config = {
+      method: 'post',
+      url: process.env.UPLOAD_URL,
+      headers: {
+        'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH,
+        'Content-Type': 'multipart/form-data',
+        ...form.getHeaders()
+      },
+      data: form
+  };
+
+  const resp = await axios.request(config);
+
+
+  unlink(process.env.UPLOAD_PATH + id + `.` + outputFormat, (err) => {
+    if (err) {
+        console.log(err);
+    }
+  console.log('tmp file deleted');
+  })
+
+  return resp.data.data;
 
 }
