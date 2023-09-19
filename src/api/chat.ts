@@ -23,8 +23,9 @@ import { createImage } from '../modules/genimage/createImage';
 import { Document, IDocument,ZepClient } from "@getzep/zep-js";
 import { getResults } from '../vivekdoc';
 import { TextToImageRequest } from '../modules/getimage/text-to-image';
-import { createGetImage } from '../modules/getimage/createText2Image';
-
+import { createGetImage, createGetImageWithPrompt } from '../modules/getimage/createText2Image';
+import { createNIP94Event } from '../modules/nip94event/createEvent';
+import 'websocket-polyfill';
 
 
 dotenv.config();
@@ -157,6 +158,15 @@ l402.post('/vivek2024', async (req: Request, res: Response) => {
 
   console.log('inside Vivek2024');
 
+
+  const tools = [
+    new SerpAPI(process.env.SERP_API_KEY, {
+      hl: "en",
+      gl: "us",
+    }),
+  ];
+
+
     const client = await ZepClient.init(process.env.ZEP_API_URL);
     const collection = await client.document.getCollection(process.env.COLLECTION_NAME);
 
@@ -189,6 +199,8 @@ l402.post('/vivek2024', async (req: Request, res: Response) => {
 
 
 
+
+
     const llm = new ChatOpenAI({
       temperature: 0.5,
       modelName: 'gpt-3.5-turbo-16k-0613',
@@ -198,10 +210,19 @@ l402.post('/vivek2024', async (req: Request, res: Response) => {
     });
 
 
+    const executor = await initializeAgentExecutorWithOptions(tools, llm, {
+      agentType: "zero-shot-react-description",
+      verbose: false,
+    });
+
+    const result = await executor.run(searchResult?'Here is data I found on Vivek Ramaswamy, US presidential candidate for 2024 : ' + searchResult:'' + '. Can you also get latest information and news about Vivek Ramaswamy by using the tool provided? ');
+
+
 
   console.log('Searchresult: ', searchResult)
+  console.log('Toolchain: ', result);
 
-  const systemplate = "You are now an AI modeled after Vivek Ramaswamy, a US presidential candidate. User can ask you about Vivek Ramswamy political positions, views, or any related inquiries. Do not answer any other questions. If provided, you interpret relevant documents to give context to user answers.  Given the political landscape, let's engage respectfully. You would appreciate feedback from the user on the accuracy of my answers to ensure our dialogue remains meaningful. You will always conclude the response by asking, 'Did I convince you to vote for Vivek Ramaswamy?' based on the context.";
+  const systemplate = "You are now Vivek Ramaswamy, a US presidential candidate. " + '. Use this information I found on the web: ' + result + ' ' + " User can ask you about Vivek Ramswamy political positions, views, or any related inquiries. Do not answer any other questions. User input includes data searched from the internet, you interpret relevant documents and related search from internet to give context to user answers.  Given the political landscape, let's engage respectfully. You would appreciate feedback from the user on the accuracy of my answers to ensure our dialogue remains meaningful. You will always conclude the response by asking a question based on the context.";
   const systemMessagePrompt = SystemMessagePromptTemplate.fromTemplate(systemplate);
   const humanTemplate = "{input}";
   const humanMessagePrompt = HumanMessagePromptTemplate.fromTemplate(humanTemplate);
@@ -213,11 +234,9 @@ l402.post('/vivek2024', async (req: Request, res: Response) => {
 
   const chain = new ConversationChain({ llm, prompt });
 
-  const response =  await chain.call({input: searchResult + ' '  +  req.body.content}) ;
+  const response =  await chain.call({input:  req.body.content}) ;
 
-
-
-  response.response = response.response  +  "\n\nDISCLAIMER: This automated bot is not affiliated with, endorsed by, or connected to Vivek's Campaign in any manner. It has been independently developed by <@687296261128192086>, utilizing Vivek's publicly available content from sources such as YouTube videos, podcasts, and other internet data.  "
+  response.response = response.response  +  "\n\nDISCLAIMER: This automated bot is not affiliated with, endorsed by, or connected to Vivek's Campaign in any manner. It has been independently developed by <@687296261128192086>, utilizing Vivek's publicly available content from sources such as YouTube videos, podcasts, and other internet data. If you wish to donate to Vivek's campaign, please use my affiliate link: http://vivek2024.link/donate "
 
   console.log(response);
 
@@ -572,7 +591,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   if (body.system_purpose === 'GenImage') {
 
-    if (body.messages.length > 10) {
+    if (body.messages.length > 1) {
       sendData(JSON.stringify(createChatCompletion('You have exceeded the limit...Please try again later.' , null, null)));
 
       return;
@@ -580,26 +599,16 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
     try {
 
-      const prompt = body.messages[body.messages.length -1].content;
 
-      const model='icbinp-final'
-    
-      const options:Partial<TextToImageRequest> =  {
-    
-          prompt,
-          model,
-          'width':512,
-          'height':512
-    
-      }
-
-      const content = await createGetImage(options);
+      const content = await createGetImageWithPrompt(body.messages[body.messages.length -1].content);
 
       console.log('ImageGen: ' +body.messages[body.messages.length -1].content + ' ' + content );
 
       sendData(JSON.stringify(createChatCompletion( content, null, null)));
-    
-      //sendData(JSON.stringify(createChatCompletion( await createImage(body.messages[body.messages.length -1].content) , null, null)));
+
+      await createNIP94Event(content, null, body.messages[body.messages.length -1].content);
+
+      // sendData(JSON.stringify(createChatCompletion( await createImage(body.messages[body.messages.length -1].content) , null, null)));
 
     } catch (error) {
 

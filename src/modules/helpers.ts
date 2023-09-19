@@ -33,6 +33,40 @@ export const relayIds = [
 
 ];
 
+export const ModelIds = [
+  "stable-diffusion-xl-v1-0",
+  "dark-sushi-mix-v2-25",
+  "absolute-reality-v1-6",
+  "synthwave-punk-v2",
+  "arcane-diffusion",
+  "moonfilm-reality-v3",
+  "moonfilm-utopia-v3",
+  "moonfilm-film-grain-v1",
+  "openjourney-v4",
+  "realistic-vision-v3",
+  "icbinp-final",
+  "icbinp-relapse",
+  "icbinp-afterburn",
+  "xsarchitectural-interior-design",
+  "mo-di-diffusion",
+  "anashel-rpg",
+  "realistic-vision-v1-3-inpainting",
+  "eimis-anime-diffusion-v1-0",
+  "something-v2-2",
+  "icbinp",
+  "analog-diffusion",
+  "neverending-dream",
+  "van-gogh-diffusion",
+  "openjourney-v1-0",
+  "realistic-vision-v1-3",
+  "stable-diffusion-v1-5-inpainting",
+  "gfpgan-v1-3",
+  "real-esrgan-4x",
+  "instruct-pix2pix",
+  "stable-diffusion-v2-1",
+  "stable-diffusion-v1-5"
+]
+
 
 export async function getLsatToChallenge(requestBody: string, amtinsats: number): Promise<Lsat> {
 
@@ -209,7 +243,7 @@ export async function publishRelay(relayUrl:string, event: NostrEvent) {
 
     const pubrelay = relayInit(relayUrl);
     await pubrelay.connect();
-    const pub = pubrelay.publish(event);
+    await pubrelay.publish(event);
 
 
   } catch (e) {
@@ -252,4 +286,92 @@ export async function getImageUrl(id: string, outputFormat:string): Promise<stri
 
   return resp.data.data;
 
+}
+
+export async function getImageUrlFromFile(dir: string, file: string): Promise<string> {
+
+
+  const form = new FormData();
+  form.append('asset', createReadStream(dir+ file));
+  form.append("name", 'current/plebai/genimg/' + file);
+  form.append("type", "image");
+
+  const config = {
+      method: 'post',
+      url: process.env.UPLOAD_URL,
+      headers: {
+        'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH,
+        'Content-Type': 'multipart/form-data',
+        ...form.getHeaders()
+      },
+      data: form
+  };
+
+  const resp = await axios.request(config);
+
+
+  unlink(dir + file, (err) => {
+    if (err) {
+        console.log(err);
+    }
+  console.log('tmp file deleted');
+  })
+
+  return resp.data.data;
+
+}
+function levenshtein(a: string, b: string): number {
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+              matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+              matrix[i][j] = Math.min(
+                  matrix[i - 1][j - 1] + 1,
+                  matrix[i][j - 1] + 1,
+                  matrix[i - 1][j] + 1
+              );
+          }
+      }
+  }
+  return matrix[b.length][a.length];
+}
+
+// Function to find the string with the strongest match
+export function findBestMatch(target: string, list: string[]): string {
+  let minDistance = Infinity;
+  let bestMatch = "";
+
+  for (const str of list) {
+      const distance = levenshtein(target, str);
+      if (distance < minDistance) {
+          minDistance = distance;
+          bestMatch = str;
+      }
+  }
+
+  return bestMatch;
+}
+
+export function closestMultipleOf256(num: number): number {
+  // Round to the nearest integer in case of floating point numbers.
+  num = Math.round(num);
+
+  const remainder = num % 256;
+  if (remainder === 0) {
+      return num; // The number is already a multiple of 256.
+  }
+
+  if (remainder <= 128) {
+      return num - remainder; // Round down (or up for negative numbers)
+  } else {
+      return num + (256 - remainder); // Round up (or down for negative numbers)
+  }
 }

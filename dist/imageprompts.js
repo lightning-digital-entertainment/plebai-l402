@@ -36,8 +36,8 @@ exports.getResults = exports.printResults = exports.naiveSplitText = exports.rea
 const fs = __importStar(require("fs"));
 const zep_js_1 = require("@getzep/zep-js");
 const readline = __importStar(require("readline"));
-const zepApiUrl = "";
-const collectionName = 'medical202301';
+const zepApiUrl = "http://107.21.5.87:7999";
+const collectionName = 'imageprompt001';
 function createCollection() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`Creating collection ${collectionName}`);
@@ -45,8 +45,8 @@ function createCollection() {
         const collection = yield client.document.addCollection({
             name: collectionName,
             embeddingDimensions: 1536,
-            description: "vivek2024 campaign",
-            metadata: { 'title': 'Vivek interview Youtube transacript' },
+            description: "Image prompt for stable diffusion",
+            metadata: { 'title': 'Image prompt for stable diffusion' },
             isAutoEmbedded: true, // optional (default: true) - whether Zep should  automatically embed documents
         });
         console.log(collection);
@@ -56,7 +56,7 @@ function uploadDocumentsOld() {
     return __awaiter(this, void 0, void 0, function* () {
         const client = yield zep_js_1.ZepClient.init(zepApiUrl);
         const collection = yield client.document.getCollection(collectionName);
-        const filename = '/Users/arunnedunchezian/Downloads/medical\ datasets/cleaned_chatdoctor_text_updated.txt';
+        const filename = '/Users/arunnedunchezian/Downloads/imageprompts.csv';
         console.log('File name is: ', filename);
         // const chunks = readChunkFromFile(filePath, maxChunk);
         const text = fs.readFileSync(filename, "utf8");
@@ -266,4 +266,4 @@ function splitStringIntoChunks(str, chunkSize) {
     }
     return chunks;
 }
-//# sourceMappingURL=medical.js.map
+//# sourceMappingURL=imageprompts.js.map

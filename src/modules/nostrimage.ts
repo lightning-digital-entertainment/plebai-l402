@@ -3,7 +3,8 @@ import { type Event as NostrEvent, getEventHash, getPublicKey, getSignature } fr
 import 'websocket-polyfill';
 import {publishRelays, readRandomRow} from './helpers'
 import { TextToImageRequest } from './getimage/text-to-image';
-import { createGetImage } from './getimage/createText2Image';
+import { createGetImage, createGetImageWithPrompt } from './getimage/createText2Image';
+import { createNIP94Event } from './nip94event/createEvent';
 
 
 dotenv.config();
@@ -16,31 +17,11 @@ export async function genPostImage() {
     try {
 
         const prompt:string = readRandomRow(process.env.UPLOAD_PATH + 'imageprompts.csv');
-        
-        
-        //const imageURL = await createImage(randomRow.replace(/"/g, ''), 512, 768, true);
 
+        const imageURL = await createGetImageWithPrompt(prompt + ' in portrait');
 
-        const model='realistic-vision-v3'//'icbinp-final'
-      
-        const options:Partial<TextToImageRequest> =  {
-      
-            prompt,
-            model,
-            width:768,
-            height:1024,
-            steps:50,
-            guidance:15,
-            scheduler:'dpmsolver++'
-
-
-      
-        }
-  
-        const imageURL = await createGetImage(options);
-  
         console.log('ImageGen: ' +prompt + ' ' + imageURL );
-  
+
 
         if (imageURL === null) return;
 
@@ -74,6 +55,8 @@ export async function genPostImage() {
 
         publishRelays(event);
 
+        await createNIP94Event(imageURL, null, content);
+
     } catch (error) {
 
         console.log('In catch with error: ', error)
@@ -84,7 +67,7 @@ export async function genPostImage() {
 
 }
 
-//genPostImage();
+// genPostImage();
 
 function getRandomInterval(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;

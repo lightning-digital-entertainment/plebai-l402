@@ -8,6 +8,7 @@ module.exports = {
     'no-underscore-dangle': 0,
     'no-param-reassign': 0,
     'no-return-assign': 0,
+    'no-shadowed-variable':0,
     camelcase: 0,
     'no-console': false,
     'no-shadowed-variable': false,

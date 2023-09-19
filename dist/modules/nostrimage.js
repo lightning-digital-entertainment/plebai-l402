@@ -33,20 +33,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.genPostImage = void 0;
-const createImage_1 = require("./genimage/createImage");
 const dotenv = __importStar(require("dotenv"));
 const nostr_tools_1 = require("nostr-tools");
 require("websocket-polyfill");
 const helpers_1 = require("./helpers");
+const createText2Image_1 = require("./getimage/createText2Image");
+const createEvent_1 = require("./nip94event/createEvent");
 dotenv.config();
 function genPostImage() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const randomRow = (0, helpers_1.readRandomRow)(process.env.UPLOAD_PATH + 'imageprompts.csv');
-            const imageURL = yield (0, createImage_1.createImage)(randomRow.replace(/"/g, ''), 512, 768, true);
+            const prompt = (0, helpers_1.readRandomRow)(process.env.UPLOAD_PATH + 'imageprompts.csv');
+            const imageURL = yield (0, createText2Image_1.createGetImageWithPrompt)(prompt + ' in portrait');
+            console.log('ImageGen: ' + prompt + ' ' + imageURL);
             if (imageURL === null)
                 return;
-            const content = "Prompt: " + randomRow + "\n " + imageURL + '\n #zapathon #bitcoin #nostr #plebchain #grownostr #zap #art #memes #pleb #PlebAI';
+            const content = "Prompt: " + prompt + "\n " + imageURL + '\n #zapathon #bitcoin #nostr #plebchain #grownostr #zap #art #memes #pleb #PlebAI';
             const tags = [];
             tags.push(['t', 'zapathon']);
             tags.push(['t', 'plebchain']);
@@ -68,6 +70,7 @@ function genPostImage() {
             event.sig = (0, nostr_tools_1.getSignature)(event, process.env.SK1);
             console.log(event);
             (0, helpers_1.publishRelays)(event);
+            yield (0, createEvent_1.createNIP94Event)(imageURL, null, content);
         }
         catch (error) {
             console.log('In catch with error: ', error);
@@ -79,7 +82,7 @@ exports.genPostImage = genPostImage;
 function getRandomInterval(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-const randomTime = getRandomInterval(900000, 1800000); // between 1 to 3 minutes in milliseconds
+const randomTime = getRandomInterval(1800000, 3600000); // between 1 to 3 minutes in milliseconds
 const timerId = setInterval(() => {
     genPostImage();
 }, randomTime);
