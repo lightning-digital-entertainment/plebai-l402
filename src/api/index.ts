@@ -2,6 +2,7 @@
 import { Request, Response, Router } from 'express';
 import chat from './chat';
 import images from './images'
+import send from './send'
 import { genPostImage } from '../modules/nostrimage';
 
 
@@ -15,5 +16,6 @@ router.get('/', (req: Request, res: Response) => {
 
 router.use('/chat', chat);
 router.use('/images', images);
+router.use('/send', send);
 
 export default router;

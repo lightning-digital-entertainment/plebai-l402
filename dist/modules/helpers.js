@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.closestMultipleOf256 = exports.findBestMatch = exports.getImageUrlFromFile = exports.getImageUrl = exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom9DigitNumber = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.ModelIds = exports.relayIds = void 0;
+exports.removeKeyword = exports.getResults = exports.saveBase64AsImageFile = exports.getBase64ImageFromURL = exports.closestMultipleOf256 = exports.findBestMatch = exports.getImageUrlFromFile = exports.getImageUrl = exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom5DigitNumber = exports.generateRandom9DigitNumber = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.ModelIds = exports.relayIds = void 0;
 const alby_tools_1 = require("alby-tools");
 const l402js_1 = require("./l402js");
 const Macaroon = __importStar(require("macaroon"));
@@ -45,6 +45,7 @@ const nostr_tools_1 = require("nostr-tools");
 const fs_1 = require("fs");
 const form_data_1 = __importDefault(require("form-data"));
 const axios_1 = __importDefault(require("axios"));
+const sharp_1 = __importDefault(require("sharp"));
 exports.relayIds = [
     'wss://relay.current.fyi',
     'wss://nostr1.current.fyi',
@@ -200,6 +201,13 @@ function generateRandom9DigitNumber() {
     return randomNumber;
 }
 exports.generateRandom9DigitNumber = generateRandom9DigitNumber;
+function generateRandom5DigitNumber() {
+    const min = 1000; // 4-digit number starting with
+    const max = 10000; // 5-digit number ending with
+    const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+    return randomNumber;
+}
+exports.generateRandom5DigitNumber = generateRandom5DigitNumber;
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -342,4 +350,58 @@ function closestMultipleOf256(num) {
     }
 }
 exports.closestMultipleOf256 = closestMultipleOf256;
+function getBase64ImageFromURL(url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            if (url === null)
+                return null;
+            const response = yield axios_1.default.get(url, {
+                responseType: 'arraybuffer'
+            });
+            const imageBuffer = Buffer.from(response.data);
+            console.log('image buffer');
+            const image = (0, sharp_1.default)(imageBuffer);
+            const metadata = yield image.metadata();
+            if (metadata.width > 1024 || metadata.height > 1024) {
+                console.log('inside iamge resize');
+                image.resize({
+                    width: 1024,
+                    height: 1024,
+                    fit: sharp_1.default.fit.inside,
+                    withoutEnlargement: true
+                });
+                const buffer = yield image.toBuffer();
+                return buffer.toString('base64');
+            }
+            return Buffer.from(response.data).toString('base64');
+        }
+        catch (error) {
+            console.log('Error at getBase64ImageFromURL', error);
+            return null;
+        }
+    });
+}
+exports.getBase64ImageFromURL = getBase64ImageFromURL;
+function saveBase64AsImageFile(filename, base64String) {
+    // Convert base64 string to a buffer
+    const buffer = Buffer.from(base64String, 'base64');
+    // Write buffer to a file
+    fs.writeFileSync(process.env.UPLOAD_PATH + filename, buffer);
+}
+exports.saveBase64AsImageFile = saveBase64AsImageFile;
+function getResults(results) {
+    let data = '';
+    for (const result of results) {
+        data = data + " " + result.content;
+    }
+    return data;
+}
+exports.getResults = getResults;
+function removeKeyword(inputString) {
+    const keywords = ['/photo', '/midjourney'];
+    const keyword = keywords.find(keyword => inputString.includes(keyword));
+    const modifiedString = inputString.replace(keyword, '');
+    return { keyword, modifiedString };
+}
+exports.removeKeyword = removeKeyword;
 //# sourceMappingURL=helpers.js.map

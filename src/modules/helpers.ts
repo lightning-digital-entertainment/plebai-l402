@@ -8,6 +8,8 @@ import { type Event as NostrEvent, relayInit } from 'nostr-tools';
 import { createReadStream, writeFileSync, unlink } from 'fs'
 import FormData from 'form-data';
 import axios from "axios";
+import sharp from "sharp";
+import { IDocument } from "@getzep/zep-js";
 
 export const relayIds = [
   'wss://relay.current.fyi',
@@ -200,6 +202,16 @@ export function generateRandom9DigitNumber():number {
   return randomNumber;
 }
 
+
+
+export function generateRandom5DigitNumber():number {
+  const min = 1000; // 4-digit number starting with
+  const max = 10000; // 5-digit number ending with
+
+  const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+  return randomNumber;
+}
+
 function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -374,4 +386,69 @@ export function closestMultipleOf256(num: number): number {
   } else {
       return num + (256 - remainder); // Round up (or down for negative numbers)
   }
+}
+
+export async function getBase64ImageFromURL(url: string): Promise<string> {
+  try {
+
+      if (url === null) return null;
+
+      const response = await axios.get<ArrayBuffer>(url, {
+          responseType: 'arraybuffer'
+      });
+
+      const imageBuffer = Buffer.from(response.data);
+
+      console.log('image buffer')
+      const image = sharp(imageBuffer);
+
+      const metadata = await image.metadata();
+
+      if (metadata.width > 1024 || metadata.height > 1024) {
+          console.log('inside iamge resize')
+          image.resize({
+              width: 1024,
+              height: 1024,
+              fit: sharp.fit.inside,
+              withoutEnlargement: true
+          });
+
+          const buffer = await image.toBuffer();
+          return buffer.toString('base64');
+      }
+
+      return Buffer.from(response.data).toString('base64');
+
+  } catch (error) {
+
+      console.log('Error at getBase64ImageFromURL',error)
+      return null;
+
+  }
+
+}
+
+export function saveBase64AsImageFile(filename: string, base64String: string) {
+  // Convert base64 string to a buffer
+  const buffer = Buffer.from(base64String, 'base64');
+
+  // Write buffer to a file
+  fs.writeFileSync(process.env.UPLOAD_PATH +filename, buffer);
+}
+
+export function getResults(results: IDocument[]): string {
+
+  let data=''
+  for (const result of results) {
+     data = data + " " + result.content;
+  }
+
+  return data;
+}
+
+export function removeKeyword(inputString: string): { keyword: string; modifiedString: string } {
+  const keywords = ['/photo', '/midjourney'];
+  const keyword = keywords.find(keyword => inputString.includes(keyword));
+  const modifiedString = inputString.replace(keyword, '');
+  return {keyword, modifiedString};
 }
