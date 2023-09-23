@@ -61,7 +61,12 @@ const createChatCompletion = (content: string | null, role: string | null, finis
 
 const l402 = Router();
 
+const openai = new OpenAI({
+  apiKey: process.env.ROUTER_API_KEY,
+  baseURL: process.env.ROUTER_URL,
+  defaultHeaders: { "HTTP-Referer": process.env.PLEBAI_URL ,"X-Title": 'PlebAI' },
 
+});
 
 l402.post('/completions', async (req: Request, res: Response) => {
 
@@ -77,12 +82,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
     }
   };
 
-  const openai = new OpenAI({
-    apiKey: process.env.ROUTER_API_KEY,
-    baseURL: process.env.ROUTER_URL,
-    defaultHeaders: { "HTTP-Referer": process.env.PLEBAI_URL ,"X-Title": 'PlebAI' },
 
-  });
 
   if (body.system_purpose === 'GenImage') {
 
@@ -95,7 +95,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
       let content = '';
 
-      const {keyword, modifiedString } = removeKeyword(content)
+      const {keyword, modifiedString } = removeKeyword(prompt)
       if (keyword) {
           if (keyword === '/photo') content = await createTogetherAIImageWithPrompt(modifiedString, 'SG161222/Realistic_Vision_V3.0_VAE', 768,512);
           if (keyword === '/midjourney') content = await createTogetherAIImageWithPrompt(modifiedString, 'prompthero/openjourney',512,512);

@@ -11,15 +11,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const openai_1 = require("langchain/chat_models/openai");
+const serpapi_1 = require("serpapi");
 const youtube_transcript_1 = require("youtube-transcript");
 const prompts_1 = require("langchain/prompts");
 const chains_1 = require("langchain/chains");
 const tools_1 = require("langchain/tools");
 const helpers_1 = require("../modules/helpers");
 const agents_1 = require("langchain/agents");
+const webbrowser_1 = require("langchain/tools/webbrowser");
+const openai_2 = require("langchain/embeddings/openai");
 const zep_js_1 = require("@getzep/zep-js");
 const vivekdoc_1 = require("../vivekdoc");
 require("websocket-polyfill");
+const data_1 = require("../modules/data");
 const l402 = (0, express_1.Router)();
 l402.post('/medical2023', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside medical2023');
@@ -70,6 +74,38 @@ l402.post('/medical2023', (req, res) => __awaiter(void 0, void 0, void 0, functi
     response.response = response.response + "\n\nDisclaimer: The answers provided by this Artificial Intelligence system are intended solely for reference and informational purposes. They should not be construed as professional medical advice, diagnosis, or treatment. Reliance on any information provided by this system is solely at the user's risk. These answers are not a substitute for the expertise and judgment of healthcare professionals and are not to be considered as the definitive medical opinion or as legally binding for the providers involved. In the event of a medical emergency, contact emergency services immediately.  ";
     console.log(response);
     res.send(response);
+}));
+l402.post('/formula1', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('inside formula 1');
+    const tools = [
+        new tools_1.SerpAPI(process.env.SERP_API_KEY, {
+            hl: "en",
+            gl: "us",
+        }),
+    ];
+    const searchQuery = 'What is the latest news on Vivek Ramaswamy';
+    console.log(searchQuery);
+    console.log(data_1.SystemPurposes);
+    const params = {
+        q: searchQuery,
+        cc: "US",
+        api_key: process.env.SERP_API_KEY
+    };
+    const serpResponse = yield (0, serpapi_1.getJson)("bing", params);
+    console.log(serpResponse);
+    const model = new openai_1.ChatOpenAI({
+        temperature: 0.5,
+        modelName: 'gpt-3.5-turbo-16k-0613',
+        streaming: false
+    });
+    const search = new tools_1.SerpAPI(process.env.SERP_API_KEY, {
+        hl: "en",
+        gl: "us",
+    });
+    const embeddings = new openai_2.OpenAIEmbeddings();
+    const browser = new webbrowser_1.WebBrowser({ model, embeddings });
+    const output = yield browser.call(serpResponse.organic_results[0].link + ", " + searchQuery);
+    res.send(output);
 }));
 l402.post('/vivek2024', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('inside Vivek2024');
@@ -212,4 +248,5 @@ function replaceWithVivek(input) {
     }
     return output;
 }
+exports.default = l402;
 //# sourceMappingURL=send.js.map

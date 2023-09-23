@@ -3,7 +3,8 @@ import { Request, Response, Router } from 'express';
 import chat from './chat';
 import images from './images'
 import send from './send'
-import { genPostImage } from '../modules/nostrimage';
+import data from './data';
+
 
 
 const router = Router();
@@ -17,5 +18,6 @@ router.get('/', (req: Request, res: Response) => {
 router.use('/chat', chat);
 router.use('/images', images);
 router.use('/send', send);
+router.use('/data', data);
 
 export default router;

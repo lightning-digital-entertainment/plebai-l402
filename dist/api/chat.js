@@ -78,6 +78,11 @@ const createChatCompletion = (content, role, finishReason) => {
     };
 };
 const l402 = (0, express_1.Router)();
+const openai = new openai_1.default({
+    apiKey: process.env.ROUTER_API_KEY,
+    baseURL: process.env.ROUTER_URL,
+    defaultHeaders: { "HTTP-Referer": process.env.PLEBAI_URL, "X-Title": 'PlebAI' },
+});
 l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, e_1, _b, _c;
     var _d, _e;
@@ -89,17 +94,12 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.write(`data: ${data}\n\n`);
         }
     };
-    const openai = new openai_1.default({
-        apiKey: process.env.ROUTER_API_KEY,
-        baseURL: process.env.ROUTER_URL,
-        defaultHeaders: { "HTTP-Referer": process.env.PLEBAI_URL, "X-Title": 'PlebAI' },
-    });
     if (body.system_purpose === 'GenImage') {
         try {
             const prompt = body.messages[body.messages.length - 1].content;
             console.log('ImageGen: ' + body.messages[body.messages.length - 1].content + ' ');
             let content = '';
-            const { keyword, modifiedString } = (0, helpers_2.removeKeyword)(content);
+            const { keyword, modifiedString } = (0, helpers_2.removeKeyword)(prompt);
             if (keyword) {
                 if (keyword === '/photo')
                     content = yield (0, createimage_1.createTogetherAIImageWithPrompt)(modifiedString, 'SG161222/Realistic_Vision_V3.0_VAE', 768, 512);

@@ -26,6 +26,9 @@ import { TextToImageRequest } from '../modules/getimage/text-to-image';
 import { createGetImage, createGetImageWithPrompt } from '../modules/getimage/createText2Image';
 import { createNIP94Event } from '../modules/nip94event/createEvent';
 import 'websocket-polyfill';
+import { StringOutputParser } from 'langchain/schema/output_parser';
+import type { BingParameters } from "serpapi";
+import { SystemPurposes } from '../modules/data';
 
 const l402 = Router();
 
@@ -82,6 +85,7 @@ l402.post('/medical2023', async (req: Request, res: Response) => {
         hl: "en",
         gl: "us",
       }),
+
     ];
 
     const chatChain = new ChatOpenAI({ modelName: "gpt-3.5-turbo-16k-0613", temperature: 0 });
@@ -122,6 +126,62 @@ l402.post('/medical2023', async (req: Request, res: Response) => {
 
 
 
+
+  });
+
+  l402.post('/formula1', async (req: Request, res: Response) => {
+
+    console.log('inside formula 1');
+
+
+    const tools = [
+      new SerpAPI(process.env.SERP_API_KEY, {
+        hl: "en",
+        gl: "us",
+      }),
+    ];
+
+    const searchQuery = 'What is the latest news on Vivek Ramaswamy'
+
+    console.log(searchQuery)
+
+    console.log(SystemPurposes);
+
+    const params = {
+      q: searchQuery,
+      cc: "US",
+      api_key: process.env.SERP_API_KEY
+    } satisfies BingParameters;
+
+    const serpResponse = await getJson("bing", params);
+
+    console.log(serpResponse);
+
+    const model = new ChatOpenAI({
+        temperature: 0.5,
+        modelName: 'gpt-3.5-turbo-16k-0613',
+        streaming: false
+
+
+      });
+
+      const search = new SerpAPI(process.env.SERP_API_KEY, {
+        hl: "en",
+        gl: "us",
+      });
+
+      const embeddings = new OpenAIEmbeddings();
+
+      const browser = new WebBrowser({ model, embeddings });
+
+
+      const output = await browser.call(
+        serpResponse.organic_results[0].link + ", " + searchQuery
+      );
+
+
+
+      res.send(output);
 
   });
 
@@ -380,6 +440,19 @@ l402.post('/medical2023', async (req: Request, res: Response) => {
     }
 
     return output;
+  }
+
+  interface OrganicResult {
+    position: number;
+    title: string;
+    link: string;
+    displayed_link: string;
+    thumbnail: string;
+    snippet: string;
+    cached_page_link?: string;
+    rich_snippet?: {
+      extensions: string[];
+    };
   }
 
   export default l402;
