@@ -29,6 +29,7 @@ import { createNIP94Event } from '../modules/nip94event/createEvent';
 import 'websocket-polyfill';
 import { createTogetherAIImageWithPrompt } from '../modules/togetherai/createimage';
 import {removeKeyword} from '../modules/helpers'
+import { insertData } from './data';
 
 
 dotenv.config();
@@ -82,7 +83,8 @@ l402.post('/completions', async (req: Request, res: Response) => {
     }
   };
 
-
+  let summaryTokens = ''
+  let userMessage = body.messages[body.messages.length -1].content;
 
   if (body.system_purpose === 'GenImage') {
 
@@ -122,6 +124,11 @@ l402.post('/completions', async (req: Request, res: Response) => {
     sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
     sendData('[DONE]');
     res.end();
+
+    // save data for logs. 
+    await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+    [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+
 
     return;
 
@@ -177,6 +184,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
   });
 
   for await (const part of stream) {
+    summaryTokens = summaryTokens + part.choices[0]?.delta?.content
     sendData(JSON.stringify(createChatCompletion(part.choices[0]?.delta?.content, null, null)));
   }
 
@@ -186,6 +194,9 @@ l402.post('/completions', async (req: Request, res: Response) => {
   sendData('[DONE]');
   res.end();
 
+  
+  await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
 
 
 });
