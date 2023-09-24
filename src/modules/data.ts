@@ -4,7 +4,7 @@ export type SystemPurposeId =   'SatsForDev' | 'PromptGenie'| 'PodChat' | 'Vivek
 
 export const defaultSystemPurposeId: SystemPurposeId = 'OrangePill';
 
-type SystemPurposeData = {
+export type SystemPurposeData = {
   title: string;
   description: string
   systemMessage: string;
@@ -19,6 +19,10 @@ type SystemPurposeData = {
   satsPay: number;
   maxToken: number;
   paid: boolean;
+  private: boolean;
+  status: string;
+  createdBy: string;
+  updatedBy: string;
 }
 
 export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
@@ -37,6 +41,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.5,
     satsPay: 50,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
   },
   GenImage: {
     title: 'Gen Image AI ',
@@ -52,6 +60,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.5,
     satsPay: 100,
     paid: true,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
   },
 
   SatsForDev: {
@@ -68,6 +80,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.5,
     satsPay: 100,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
   },
 
   DocGPT: {
@@ -84,6 +100,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.5,
     satsPay: 50,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
   },
 
 
@@ -103,6 +123,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.5,
     satsPay: 100,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
   },
   PromptGenie: {
     title: 'Pickup Artist',
@@ -118,6 +142,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.5,
     satsPay: 100,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
   },
 
 
@@ -138,6 +166,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.5,
     satsPay: 100,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
 
   },
 
@@ -156,6 +188,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.2,
     satsPay: 100,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
 
   },
 
@@ -173,6 +209,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.2,
     satsPay: 25,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
 
   },
 
@@ -190,6 +230,10 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     temperature: 0.9,
     satsPay: 100,
     paid: false,
+    private: false,
+    status: 'active',
+    createdBy: 'System001',
+    updatedBy: 'System001'
 
   },
 

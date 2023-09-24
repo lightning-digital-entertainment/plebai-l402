@@ -52,12 +52,34 @@ const zep_js_1 = require("@getzep/zep-js");
 const vivekdoc_1 = require("../vivekdoc");
 const createEvent_1 = require("../modules/nip94event/createEvent");
 require("websocket-polyfill");
+const pg_1 = require("pg");
 const createimage_1 = require("../modules/togetherai/createimage");
 const helpers_2 = require("../modules/helpers");
 dotenv.config();
 const wordRegex = /\s+/g;
 const sessionId = "";
 // const zepClient = new ZepClient(process.env.ZEP_API_URL, process.env.OPENAI_API_KEY);
+const cn = {
+    host: process.env.DBHOST,
+    port: 5432,
+    database: process.env.DBNAME,
+    user: process.env.DBUSER,
+    password: process.env.DBPASSWORD,
+    poolSize: 20,
+    ssl: { rejectUnauthorized: false, }
+};
+const pgclient = new pg_1.Client(cn);
+let pgupdate = false;
+pgclient.connect((err) => {
+    if (err) {
+        console.error('pg connection error', err.stack);
+        pgupdate = false;
+    }
+    else {
+        console.log('pg client is connected');
+        pgupdate = true;
+    }
+});
 const createChatCompletion = (content, role, finishReason) => {
     const id = (0, uuid_1.v4)();
     return {

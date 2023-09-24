@@ -17,6 +17,10 @@ exports.SystemPurposes = {
         temperature: 0.5,
         satsPay: 50,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     GenImage: {
         title: 'Gen Image AI ',
@@ -32,6 +36,10 @@ exports.SystemPurposes = {
         temperature: 0.5,
         satsPay: 100,
         paid: true,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     SatsForDev: {
         title: 'CodeGPT',
@@ -47,6 +55,10 @@ exports.SystemPurposes = {
         temperature: 0.5,
         satsPay: 100,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     DocGPT: {
         title: 'DocGPT',
@@ -62,6 +74,10 @@ exports.SystemPurposes = {
         temperature: 0.5,
         satsPay: 50,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     Vivek2024: {
         title: 'Ask Vivek 2024 ',
@@ -77,6 +93,10 @@ exports.SystemPurposes = {
         temperature: 0.5,
         satsPay: 100,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     PromptGenie: {
         title: 'Pickup Artist',
@@ -92,6 +112,10 @@ exports.SystemPurposes = {
         temperature: 0.5,
         satsPay: 100,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     PodChat: {
         title: 'AngryGPT',
@@ -107,6 +131,10 @@ exports.SystemPurposes = {
         temperature: 0.5,
         satsPay: 100,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     Editor: {
         title: 'English Editor',
@@ -122,6 +150,10 @@ exports.SystemPurposes = {
         temperature: 0.2,
         satsPay: 100,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     Emoji: {
         title: 'EmojiGPT',
@@ -137,6 +169,10 @@ exports.SystemPurposes = {
         temperature: 0.2,
         satsPay: 25,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
     RoastMaster: {
         title: 'Roast Master',
@@ -152,6 +188,10 @@ exports.SystemPurposes = {
         temperature: 0.9,
         satsPay: 100,
         paid: false,
+        private: false,
+        status: 'active',
+        createdBy: 'System001',
+        updatedBy: 'System001'
     },
 };
 //# sourceMappingURL=data.js.map

@@ -452,3 +452,62 @@ export function removeKeyword(inputString: string): { keyword: string; modifiedS
   const modifiedString = inputString.replace(keyword, '');
   return {keyword, modifiedString};
 }
+
+export function errorBadAuth(res:any) {
+  return res.status(400).send({
+    error: true,
+    code: 1,
+    message: 'bad auth',
+  });
+}
+
+
+
+function errorDailyLimit(res:any) {
+  return res.status(400).send({
+    error: true,
+    code: 1,
+    message: 'Exceeded daily limit of 50,000 sats',
+  });
+}
+
+export function errorInvoicePaid(res:any) {
+  return res.status(500).send({
+    error: true,
+    code: 1,
+    message: 'Invoice already paid...',
+  });
+}
+
+export function errorBadArguments(res:any) {
+  return res.status(500).send({
+    error: true,
+    code: 2,
+    message: 'bad arguments',
+  });
+}
+
+export function errorUnauthorized(res:any) {
+  return res.status(401).send({
+    error: true,
+    code: 2,
+    message: 'Auth failed',
+  });
+}
+
+export function errorAdultcontent(res:any) {
+  return res.status(500).send({
+    error: true,
+    code: 2,
+    message: 'Adult content detected..!',
+  });
+}
+
+export function errorServer(res:any) {
+  return res.status(500).send({
+    error: true,
+    code: 3,
+    message: 'internal Server error',
+  });
+}
+
