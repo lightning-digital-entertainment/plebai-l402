@@ -52,34 +52,13 @@ const zep_js_1 = require("@getzep/zep-js");
 const vivekdoc_1 = require("../vivekdoc");
 const createEvent_1 = require("../modules/nip94event/createEvent");
 require("websocket-polyfill");
-const pg_1 = require("pg");
 const createimage_1 = require("../modules/togetherai/createimage");
 const helpers_2 = require("../modules/helpers");
+const data_1 = require("./data");
 dotenv.config();
 const wordRegex = /\s+/g;
 const sessionId = "";
 // const zepClient = new ZepClient(process.env.ZEP_API_URL, process.env.OPENAI_API_KEY);
-const cn = {
-    host: process.env.DBHOST,
-    port: 5432,
-    database: process.env.DBNAME,
-    user: process.env.DBUSER,
-    password: process.env.DBPASSWORD,
-    poolSize: 20,
-    ssl: { rejectUnauthorized: false, }
-};
-const pgclient = new pg_1.Client(cn);
-let pgupdate = false;
-pgclient.connect((err) => {
-    if (err) {
-        console.error('pg connection error', err.stack);
-        pgupdate = false;
-    }
-    else {
-        console.log('pg client is connected');
-        pgupdate = true;
-    }
-});
 const createChatCompletion = (content, role, finishReason) => {
     const id = (0, uuid_1.v4)();
     return {
@@ -107,7 +86,7 @@ const openai = new openai_1.default({
 });
 l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, e_1, _b, _c;
-    var _d, _e;
+    var _d, _e, _f, _g;
     const body = req.body;
     console.log('body: ', body);
     const sendData = (data) => {
@@ -116,6 +95,8 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.write(`data: ${data}\n\n`);
         }
     };
+    let summaryTokens = '';
+    const userMessage = body.messages[body.messages.length - 1].content;
     if (body.system_purpose === 'GenImage') {
         try {
             const prompt = body.messages[body.messages.length - 1].content;
@@ -143,6 +124,8 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
         sendData('[DONE]');
         res.end();
+        // save data for logs.
+        yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, summaryTokens, req.body, req.body]);
         return;
     }
     if (body.system_purpose === 'Vivek2024' || body.system_purpose === 'DocGPT') {
@@ -173,17 +156,18 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         temperature: body.temperature
     });
     try {
-        for (var _f = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _f = true) {
+        for (var _h = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _h = true) {
             _c = stream_1_1.value;
-            _f = false;
+            _h = false;
             const part = _c;
-            sendData(JSON.stringify(createChatCompletion((_e = (_d = part.choices[0]) === null || _d === void 0 ? void 0 : _d.delta) === null || _e === void 0 ? void 0 : _e.content, null, null)));
+            summaryTokens = summaryTokens + ((_e = (_d = part.choices[0]) === null || _d === void 0 ? void 0 : _d.delta) === null || _e === void 0 ? void 0 : _e.content);
+            sendData(JSON.stringify(createChatCompletion((_g = (_f = part.choices[0]) === null || _f === void 0 ? void 0 : _f.delta) === null || _g === void 0 ? void 0 : _g.content, null, null)));
         }
     }
     catch (e_1_1) { e_1 = { error: e_1_1 }; }
     finally {
         try {
-            if (!_f && !_a && (_b = stream_1.return)) yield _b.call(stream_1);
+            if (!_h && !_a && (_b = stream_1.return)) yield _b.call(stream_1);
         }
         finally { if (e_1) throw e_1.error; }
     }
@@ -192,6 +176,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
     sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
     sendData('[DONE]');
     res.end();
+    yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, summaryTokens, req.body, req.body]);
 }));
 exports.default = l402;
 function lsatChallenge(requestBody, res) {

@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeKeyword = exports.getResults = exports.saveBase64AsImageFile = exports.getBase64ImageFromURL = exports.closestMultipleOf256 = exports.findBestMatch = exports.getImageUrlFromFile = exports.getImageUrl = exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom5DigitNumber = exports.generateRandom9DigitNumber = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.ModelIds = exports.relayIds = void 0;
+exports.errorServer = exports.errorAdultcontent = exports.errorUnauthorized = exports.errorBadArguments = exports.errorInvoicePaid = exports.errorBadAuth = exports.removeKeyword = exports.getResults = exports.saveBase64AsImageFile = exports.getBase64ImageFromURL = exports.closestMultipleOf256 = exports.findBestMatch = exports.getImageUrlFromFile = exports.getImageUrl = exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom5DigitNumber = exports.generateRandom9DigitNumber = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.ModelIds = exports.relayIds = void 0;
 const alby_tools_1 = require("alby-tools");
 const l402js_1 = require("./l402js");
 const Macaroon = __importStar(require("macaroon"));
@@ -404,4 +404,59 @@ function removeKeyword(inputString) {
     return { keyword, modifiedString };
 }
 exports.removeKeyword = removeKeyword;
+function errorBadAuth(res) {
+    return res.status(400).send({
+        error: true,
+        code: 1,
+        message: 'bad auth',
+    });
+}
+exports.errorBadAuth = errorBadAuth;
+function errorDailyLimit(res) {
+    return res.status(400).send({
+        error: true,
+        code: 1,
+        message: 'Exceeded daily limit of 50,000 sats',
+    });
+}
+function errorInvoicePaid(res) {
+    return res.status(500).send({
+        error: true,
+        code: 1,
+        message: 'Invoice already paid...',
+    });
+}
+exports.errorInvoicePaid = errorInvoicePaid;
+function errorBadArguments(res) {
+    return res.status(500).send({
+        error: true,
+        code: 2,
+        message: 'bad arguments',
+    });
+}
+exports.errorBadArguments = errorBadArguments;
+function errorUnauthorized(res) {
+    return res.status(401).send({
+        error: true,
+        code: 2,
+        message: 'Auth failed',
+    });
+}
+exports.errorUnauthorized = errorUnauthorized;
+function errorAdultcontent(res) {
+    return res.status(500).send({
+        error: true,
+        code: 2,
+        message: 'Adult content detected..!',
+    });
+}
+exports.errorAdultcontent = errorAdultcontent;
+function errorServer(res) {
+    return res.status(500).send({
+        error: true,
+        code: 3,
+        message: 'internal Server error',
+    });
+}
+exports.errorServer = errorServer;
 //# sourceMappingURL=helpers.js.map
