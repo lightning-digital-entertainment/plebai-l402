@@ -11,7 +11,7 @@ import { ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate, SystemM
 import { ConversationChain, LLMChain } from "langchain/chains";
 import { SerpAPI } from "langchain/tools";
 import { Lsat } from '../modules/l402js'
-import { getLsatToChallenge, sendHeaders, vetifyLsatToken } from '../modules/helpers';
+import { getBase64ImageFromURL, getImageUrl, getLsatToChallenge, saveBase64AsImageFile, sendHeaders, vetifyLsatToken } from '../modules/helpers';
 import { initializeAgentExecutorWithOptions } from "langchain/agents";
 import { WebBrowser } from "langchain/tools/webbrowser";
 import { Calculator } from "langchain/tools/calculator";
@@ -29,7 +29,8 @@ import { createNIP94Event } from '../modules/nip94event/createEvent';
 import 'websocket-polyfill';
 import { createTogetherAIImageWithPrompt } from '../modules/togetherai/createimage';
 import {removeKeyword} from '../modules/helpers'
-import { insertData } from './data';
+import { getAgentById, insertData } from './data';
+import { createSinkinImageWithPrompt, createSinkinImageWithPromptandLora } from '../modules/sinkin/createimage';
 
 
 dotenv.config();
@@ -85,6 +86,67 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   let summaryTokens = ''
   const userMessage = body.messages[body.messages.length -1].content;
+
+
+  try {
+    
+        const agentData:any = await getAgentById(body.system_purpose);
+
+        console.log('agentData: ', agentData);
+
+        if (agentData && agentData?.genimage && agentData?.modelid) {
+
+              
+          try {
+
+            const prompt = body.messages[body.messages.length -1].content;
+            let content = '';
+            
+            if (agentData?.lora) {
+
+              if (content === '') content = await createSinkinImageWithPromptandLora(prompt, agentData.modelid, agentData.lora);
+            } else {
+
+              if (content === '') content = await createSinkinImageWithPrompt(prompt, agentData.modelid);
+            }
+            
+            const imageString = await getBase64ImageFromURL(content);
+            const id = uuidv4();
+            saveBase64AsImageFile(id + '.png', imageString);
+            const currentImageString = await getImageUrl(id, 'png');
+   
+            sendData(JSON.stringify(createChatCompletion( currentImageString, null, null)));
+
+            await createNIP94Event(currentImageString, null, body.messages[body.messages.length -1].content);
+
+            
+          } catch (error) {
+            
+            console.log(error)
+          }
+      
+          sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
+          sendData('[DONE]');
+          res.end();
+      
+          // save data for logs.
+          await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+          [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+      
+          
+          return;
+
+
+
+
+        }
+
+  } catch (error) {
+
+    console.log('In catch checking if it is genImage agent: ', error)
+    
+  }
+
 
   if (body.system_purpose === 'GenImage') {
 

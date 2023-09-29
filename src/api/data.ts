@@ -143,7 +143,13 @@ data.post('/agent/create', async (req: Request, res: Response) => {
 });
 
 
+export async function getAgentById (id: string):Promise<any>{
 
+
+        const result = await pgclient.query("SELECT * from aiagents where id = '" + id + "';");
+        return(result.rows[0]);
+
+} 
 
 
 
