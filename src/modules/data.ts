@@ -23,6 +23,7 @@ export type SystemPurposeData = {
   status: string;
   createdBy: string;
   updatedBy: string;
+  chatruns: number,
 }
 
 export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
@@ -44,7 +45,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
   },
   GenImage: {
     title: 'Gen Image AI ',
@@ -63,7 +65,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
   },
 
   SatsForDev: {
@@ -83,7 +86,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
   },
 
   DocGPT: {
@@ -103,7 +107,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
   },
 
 
@@ -126,7 +131,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
   },
   PromptGenie: {
     title: 'Pickup Artist',
@@ -145,7 +151,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
   },
 
 
@@ -169,7 +176,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
 
   },
 
@@ -191,7 +199,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
 
   },
 
@@ -212,7 +221,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
 
   },
 
@@ -233,7 +243,8 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     private: false,
     status: 'active',
     createdBy: 'System001',
-    updatedBy: 'System001'
+    updatedBy: 'System001',
+    chatruns:1
 
   },
 
