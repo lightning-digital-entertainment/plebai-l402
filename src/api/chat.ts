@@ -1,30 +1,13 @@
 import { Request, Response, Router } from 'express';
-import { ChatOpenAI } from "langchain/chat_models/openai";
-import { HumanMessage, SystemMessage } from "langchain/schema";
 import * as dotenv from 'dotenv';
-import type { YoutubeParameters } from "serpapi";
-import { getJson } from "serpapi";
-import { YoutubeTranscript } from 'youtube-transcript';
-import { ZepMemory } from "langchain/memory/zep";
 import { Memory, Message} from '@getzep/zep-js';
-import { ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate, SystemMessagePromptTemplate } from "langchain/prompts";
-import { ConversationChain, LLMChain } from "langchain/chains";
 import { SerpAPI } from "langchain/tools";
 import { Lsat } from '../modules/l402js'
 import { getBase64ImageFromURL, getImageUrl, getLsatToChallenge, saveBase64AsImageFile, sendHeaders, vetifyLsatToken } from '../modules/helpers';
-import { initializeAgentExecutorWithOptions } from "langchain/agents";
-import { WebBrowser } from "langchain/tools/webbrowser";
-import { Calculator } from "langchain/tools/calculator";
-import { OpenAIEmbeddings } from "langchain/embeddings/openai";
-// import { OpenAI } from "langchain/llms/openai";
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
-import { StructuredOutputParser } from "langchain/output_parsers";
-import { createImage } from '../modules/genimage/createImage';
 import { Document, IDocument,ZepClient } from "@getzep/zep-js";
 import { getResults } from '../vivekdoc';
-import { TextToImageRequest } from '../modules/getimage/text-to-image';
-import { createGetImage, createGetImageWithPrompt } from '../modules/getimage/createText2Image';
 import { createNIP94Event } from '../modules/nip94event/createEvent';
 import 'websocket-polyfill';
 import { createTogetherAIImageWithPrompt } from '../modules/togetherai/createimage';
@@ -76,13 +59,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   console.log('body: ', body);
 
-  const sendData = (data: string) => {
-    if (body.stream?body.stream:false) {
-      res.write(`event: completion \n`);
-      res.write(`data: ${data}\n\n`);
-
-    }
-  };
+  
 
   let summaryTokens = ''
   const userMessage = body.messages[body.messages.length -1].content;
@@ -114,8 +91,16 @@ l402.post('/completions', async (req: Request, res: Response) => {
             const id = uuidv4();
             saveBase64AsImageFile(id + '.png', imageString);
             const currentImageString = await getImageUrl(id, 'png');
+
+            if (body?.stream) {
+              sendStream(JSON.stringify(createChatCompletion(currentImageString, null, null)), res);
+
+            } else {
+              res.send(currentImageString);
+
+            }
    
-            sendData(JSON.stringify(createChatCompletion( currentImageString, null, null)));
+            
 
             await createNIP94Event(currentImageString, null, body.messages[body.messages.length -1].content);
 
@@ -125,9 +110,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
             console.log(error)
           }
       
-          sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
-          sendData('[DONE]');
-          res.end();
+          if (body?.stream) endStream(res);
       
           // save data for logs.
           await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
@@ -168,7 +151,13 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
       if (content === '') content = await createTogetherAIImageWithPrompt(prompt, 'stabilityai/stable-diffusion-xl-base-1.0', 1024,1024);
 
-      sendData(JSON.stringify(createChatCompletion( content, null, null)));
+      if (body?.stream) {
+        sendStream(JSON.stringify(createChatCompletion( content, null, null)), res);
+      } else {
+        res.send(content);
+
+      }
+      
 
       await createNIP94Event(content, null, body.messages[body.messages.length -1].content);
 
@@ -178,14 +167,12 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
       console.log(error)
       sleep(500);
-      sendData(JSON.stringify(createChatCompletion('Unable to create image due to server issue. Please try later...' , null, null)));
+      sendStream(JSON.stringify(createChatCompletion('Unable to create image due to server issue. Please try later...' , null, null)), res);
 
     }
 
 
-    sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
-    sendData('[DONE]');
-    res.end();
+    if (body?.stream) endStream(res);
 
     // save data for logs.
     await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
@@ -235,27 +222,49 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   console.log('Input prompt: ' + JSON.stringify(messages));
 
-  const stream = await openai.chat.completions.create({
+  if (body?.stream) {
 
-    messages,
-    model: body.llm_router,
-    max_tokens: body.max_tokens,
-    stream: true,
-    temperature: body.temperature
+        const stream = await openai.chat.completions.create({
 
-  });
+          messages,
+          model: body.llm_router,
+          max_tokens: body.max_tokens,
+          stream: true,
+          temperature: body.temperature
 
-  for await (const part of stream) {
-    summaryTokens = summaryTokens + part.choices[0]?.delta?.content
-    sendData(JSON.stringify(createChatCompletion(part.choices[0]?.delta?.content, null, null)));
+        });
+
+        for await (const part of stream) {
+          summaryTokens = summaryTokens + part.choices[0]?.delta?.content
+          sendStream(JSON.stringify(createChatCompletion(part.choices[0]?.delta?.content, null, null)), res);
+        }
+
+        if (body.system_purpose === 'Vivek2024') sendStream(JSON.stringify(createChatCompletion("\n\nTo donate to Vivek's campaign, Go to https://vivek2024.link/donate", null, null)), res);
+
+        //end stream 
+        endStream(res);
+
+
+  } else {
+
+        const stream:any = await openai.chat.completions.create({
+
+          messages,
+          model: body.llm_router,
+          max_tokens: body.max_tokens,
+          stream: false,
+          temperature: body.temperature
+
+        });
+
+        console.log('stream', stream)
+
+        res.send(stream.choices[0].message.content);
+
+
   }
 
-  if (body.system_purpose === 'Vivek2024') sendData(JSON.stringify(createChatCompletion("\n\nTo donate to Vivek's campaign, Go to https://vivek2024.link/donate", null, null)));
-
-  sendData(JSON.stringify(createChatCompletion(null, '', 'stop')));
-  sendData('[DONE]');
-  res.end();
-
+       
 
   await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
             [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
@@ -287,6 +296,22 @@ interface Delta {
 interface Conversation {
   role: string;
   content: string;
+}
+
+
+async function sendStream(data:string, res:Response) {
+  
+  res.write(`event: completion \n`);
+  res.write(`data: ${data}\n\n`);
+}
+
+async function endStream(res:Response) {
+
+  sendStream(JSON.stringify(createChatCompletion(null, '', 'stop')), res);
+  sendStream('[DONE]', res);
+  res.end();
+
+
 }
 
 
