@@ -5,6 +5,7 @@ import {publishRelays, readRandomRow} from './helpers'
 import { TextToImageRequest } from './getimage/text-to-image';
 import { createGetImage, createGetImageWithPrompt } from './getimage/createText2Image';
 import { createNIP94Event } from './nip94event/createEvent';
+import { createSinkinImageWithPrompt } from './sinkin/createimage';
 
 
 dotenv.config();
@@ -18,7 +19,7 @@ export async function genPostImage() {
 
         const prompt:string = readRandomRow(process.env.UPLOAD_PATH + 'imageprompts.csv');
 
-        const imageURL = await createGetImageWithPrompt(prompt + ' in portrait');
+        const imageURL = await createSinkinImageWithPrompt(prompt + ' in portrait', '4zdwGOB');
 
         console.log('ImageGen: ' +prompt + ' ' + imageURL );
 

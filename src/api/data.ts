@@ -60,7 +60,7 @@ data.post('/agents', async (req: Request, res: Response) => {
                 res.send({SystemPurposes})
 
         } else {
-                const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '"+ req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
+                const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, CASE WHEN createtime < NOW() - INTERVAL '4 day' THEN 'false' ELSE 'true' END AS newagent FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '"+ req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
                 //const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
                 const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; newAgent: boolean  }; }[] = [];
                 const dataOutput: { [key: string]: any } = {};
@@ -109,6 +109,127 @@ data.post('/agents', async (req: Request, res: Response) => {
 
 });
 
+data.post('/agents/all', async (req: Request, res: Response) => {
+
+        console.log(req.body);
+
+        if (!pgupdate) {
+                res.send({SystemPurposes})
+
+        } else {
+                const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05 FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '"+ req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
+                //const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
+                const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; newAgent: boolean, key_iv:string, key_content:string, nip05:string  }; }[] = [];
+                const dataOutput: { [key: string]: any } = {};
+                if (result.rows) {
+                        result.rows.filter(item => {
+
+                                agentData.push({
+                                        [item.id]: {
+                                                title: item.title,
+                                                description: item.description,
+                                                systemMessage: item.systemmessage,
+                                                symbol: item.symbol,
+                                                examples: item.examples,
+                                                placeHolder: item.placeholder,
+                                                chatLLM: item.chatllm,
+                                                llmRouter: item.llmrouter,
+                                                convoCount: item.convocount,
+                                                maxToken: item.maxtoken,
+                                                temperature: item.temperature,
+                                                satsPay: item.satspay,
+                                                paid: item.paid,
+                                                private: item.private,
+                                                status: item.status,
+                                                createdBy: item.createdby,
+                                                updatedBy: item.updatedby,
+                                                chatruns: item.chatruns,
+                                                newAgent: item.newagent,
+                                                key_iv: item.key_iv,
+                                                key_content: item.key_content,
+                                                nip05: item.nip05
+                                        },
+
+                                });
+
+
+
+
+                        });
+
+                        agentData.forEach(item => {
+                                const key = Object.keys(item)[0];
+                                dataOutput[key] = item[key];
+                            });
+                        res.send({SystemPurposes: dataOutput});
+                }
+
+
+        }
+
+});
+
+data.post('/agent', async (req: Request, res: Response) => {
+
+        console.log(req.body);
+
+        if (!req.body?.id) res.send({error: 'ai agent not found'})
+
+        if (!pgupdate) {
+                res.send({error: 'ai agent not found'})
+
+        } else {
+                const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05 FROM aiagents WHERE  id = '" + req.body.id + "'");
+                const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; newAgent: boolean, key_iv:string, key_content:string, nip05:string  }; }[] = [];
+                const dataOutput: { [key: string]: any } = {};
+                if (result.rows) {
+                        result.rows.filter(item => {
+
+                                agentData.push({
+                                        [item.id]: {
+                                                title: item.title,
+                                                description: item.description,
+                                                systemMessage: item.systemmessage,
+                                                symbol: item.symbol,
+                                                examples: item.examples,
+                                                placeHolder: item.placeholder,
+                                                chatLLM: item.chatllm,
+                                                llmRouter: item.llmrouter,
+                                                convoCount: item.convocount,
+                                                maxToken: item.maxtoken,
+                                                temperature: item.temperature,
+                                                satsPay: item.satspay,
+                                                paid: item.paid,
+                                                private: item.private,
+                                                status: item.status,
+                                                createdBy: item.createdby,
+                                                updatedBy: item.updatedby,
+                                                chatruns: item.chatruns,
+                                                newAgent: item.newagent,
+                                                key_iv: item.key_iv,
+                                                key_content: item.key_content,
+                                                nip05: item.nip05
+                                        },
+
+                                });
+
+
+
+
+                        });
+
+                        agentData.forEach(item => {
+                                const key = Object.keys(item)[0];
+                                dataOutput[key] = item[key];
+                            });
+                        res.send({SystemPurposes: dataOutput});
+                }
+
+
+        }
+
+});
+
 data.post('/agent/create', async (req: Request, res: Response) => {
 
         console.log(req.body);
@@ -125,9 +246,9 @@ data.post('/agent/create', async (req: Request, res: Response) => {
                         console.log(agent);
 
                         if (!agent.paid) agent.paid= false;
-                        if (!agent.llmRouter)  agent.llmRouter = 'meta-llama/llama-2-13b-chat';
-                        if (!agent.convoCount) agent.convoCount = 20;
-                        if (!agent.maxToken) agent.maxToken = 256;
+                        if (!agent.llmRouter)  agent.llmRouter = 'nousresearch/nous-hermes-llama2-13b';
+                        if (!agent.convoCount) agent.convoCount = 5;
+                        if (!agent.maxToken) agent.maxToken = 512;
                         if (!agent.temperature) agent.temperature = 0.8;
                         if (!agent.satsPay) agent.satsPay = 50;
 
@@ -151,6 +272,26 @@ export async function getAgentById (id: string):Promise<any>{
 
 } 
 
+data.post('/agent/update', (req: Request, res: Response) => {
+
+
+        console.log(req.body);
+      
+        const columns = Object.keys(req.body);
+        const values = Object.values(req.body);
+      
+        const updateQuery = `UPDATE aiagents SET ${columns.map((column, index) => `${column} = $${index + 1}`).join(', ')} WHERE id = '` + req.body.id + `'`;
+        console.log(updateQuery, values);
+        pgclient.query(updateQuery, values, (err, result) => {
+          if (err) {
+            console.error(err);
+            res.status(500).send('Error updating table');
+          } else {
+            res.send(result);
+          }
+        });
+
+});
 
 
 export default data;
