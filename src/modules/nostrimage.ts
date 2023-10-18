@@ -6,6 +6,7 @@ import { TextToImageRequest } from './getimage/text-to-image';
 import { createGetImage, createGetImageWithPrompt } from './getimage/createText2Image';
 import { createNIP94Event } from './nip94event/createEvent';
 import { createSinkinImageWithPrompt } from './sinkin/createimage';
+import { createTxt2ImgWithPrompt } from './randomseed/txt2img';
 
 
 dotenv.config();
@@ -19,14 +20,14 @@ export async function genPostImage() {
 
         const prompt:string = readRandomRow(process.env.UPLOAD_PATH + 'imageprompts.csv');
 
-        const imageURL = await createSinkinImageWithPrompt(prompt + ' in portrait', '4zdwGOB');
+        const imageURL = await createTxt2ImgWithPrompt(prompt, 'Juggernaut_XL', 768,512); //createSinkinImageWithPrompt(prompt + ' in portrait', '4zdwGOB');
 
         console.log('ImageGen: ' +prompt + ' ' + imageURL );
 
 
         if (imageURL === null) return;
 
-        const content = "Prompt: " + prompt + "\n "  +  imageURL + '\n #zapathon #bitcoin #nostr #plebchain #grownostr #zap #art #memes #pleb #PlebAI';
+        const content = "Prompt: " + prompt + "\n "  +  imageURL.output[0] + '\n #zapathon #bitcoin #nostr #plebchain #grownostr #zap #art #memes #pleb #PlebAI';
 
         const tags:string[][] = [];
         tags.push(['t', 'zapathon']);
@@ -56,7 +57,7 @@ export async function genPostImage() {
 
         publishRelays(event);
 
-        await createNIP94Event(imageURL, null, content);
+        await createNIP94Event(imageURL.output[0], null, content);
 
     } catch (error) {
 

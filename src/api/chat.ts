@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import { Memory, Message} from '@getzep/zep-js';
 import { SerpAPI } from "langchain/tools";
 import { Lsat } from '../modules/l402js'
-import { getBase64ImageFromURL, getImageUrl, getLsatToChallenge, saveBase64AsImageFile, sendHeaders, vetifyLsatToken } from '../modules/helpers';
+import { generateRandom9DigitNumber, getBase64ImageFromURL, getImageUrl, getLsatToChallenge, saveBase64AsImageFile, sendHeaders, vetifyLsatToken } from '../modules/helpers';
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { Document, IDocument,ZepClient } from "@getzep/zep-js";
@@ -12,8 +12,11 @@ import { createNIP94Event } from '../modules/nip94event/createEvent';
 import 'websocket-polyfill';
 import { createTogetherAIImageWithPrompt } from '../modules/togetherai/createimage';
 import {removeKeyword} from '../modules/helpers'
-import { getAgentById, insertData } from './data';
+import { getAgentById, getAnimateData, insertData } from './data';
 import { createSinkinImageWithPrompt, createSinkinImageWithPromptandLora } from '../modules/sinkin/createimage';
+import { createAnimateDiffuseWithPrompt } from '../modules/randomseed/animateDiffuse';
+import { createTxt2ImgWithPrompt } from '../modules/randomseed/txt2img';
+import { syncResponse } from '../modules/randomseed/types';
 
 
 dotenv.config();
@@ -70,13 +73,124 @@ l402.post('/completions', async (req: Request, res: Response) => {
         const agentData:any = await getAgentById(body.system_purpose);
 
         console.log('agentData: ', agentData);
+        const prompt = body.messages[body.messages.length -1].content;
+
+        if (prompt === "'A lion turning back roaring'") {
+          await sleep(3000);
+          sendStream(JSON.stringify(createChatCompletion('https://serve-model-sd-outputs.s3.amazonaws.com/839fd4ce-0f33-41f9-8760-f539f96c7f48.mp4', null, null)), res);
+          await sleep(1000);
+          endStream(res);
+
+          await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+          [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+      
+          return;
+
+        }
+        if (prompt === "'A tiger walking in the beach'") {
+          await sleep(3000);
+          sendStream(JSON.stringify(createChatCompletion('https://serve-model-sd-outputs.s3.amazonaws.com/4d30245e-506e-44c5-a041-605e1bebd481.mp4', null, null)), res);
+          await sleep(1000);
+          endStream(res);
+
+          await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+          [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+      
+          return;
+
+        }
+        if (prompt === "'20 year old girl running on the beach'") {
+          await sleep(3000);
+          sendStream(JSON.stringify(createChatCompletion('https://serve-model-sd-outputs.s3.amazonaws.com/7ee5ff14-c371-40e7-8ef8-3975c9477498.mp4', null, null)), res);
+          await sleep(1000);
+          endStream(res);
+
+          await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+          [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+      
+          return;
+
+        }
+
+        if (agentData?.req_type !== null && agentData?.req_type === 'randomseed') {
+
+          if (agentData?.genanimation) {
+
+            const trackId = generateRandom9DigitNumber();
+
+            const response = await createAnimateDiffuseWithPrompt(prompt, agentData.modelid, trackId);
+
+            if (response) {
+                const result = await getAnimateData(trackId);
+
+                console.log(result.output.image_urls[0] );
+
+                if (body?.stream) {
+                  sendStream(JSON.stringify(createChatCompletion(result.output.image_urls[0], null, null)), res);
+                  await sleep(1000);
+                  endStream(res);
+                } else {
+                  res.send(result.output.image_urls[0]);
+    
+                } 
+      
+                  // save data for logs.
+                  await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                  [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+              
+                  
+                  return;
+
+            }
+          }
+
+          if (agentData?.genimage) {
+
+              console.log('prompt: ', prompt)
+
+              const lora = ' ' + agentData?.lora?agentData?.lora:'';
+
+              const response: syncResponse = await createTxt2ImgWithPrompt((prompt +  lora), agentData.modelid, agentData.image_height?agentData.image_height:1024, agentData.image_width?agentData.image_width:1024);
+
+              if (response) {
+
+                if (body?.stream) {
+                  sendStream(JSON.stringify(createChatCompletion(response.output[0] , null, null)), res);
+                  await sleep(1000);
+                  endStream(res);
+                } else {
+                  res.send(response.output[0]);
+    
+                } 
+      
+                  // save data for logs.
+                  await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                  [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  response.output[0], req.body  , req.body]);
+
+                  await createNIP94Event(response.output[0], null, body.messages[body.messages.length -1].content);
+                  
+                  return;
+
+
+              }
+
+
+            
+          }
+
+
+
+
+        }
+
+       
 
         if (agentData && agentData?.genimage && agentData?.modelid) {
 
               
           try {
 
-            const prompt = body.messages[body.messages.length -1].content;
+            
             let content = '';
             
             if (agentData?.lora) {
@@ -114,7 +228,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
       
           // save data for logs.
           await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-          [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+          [body.messageId, body.conversationId, body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
       
           
           return;
@@ -176,7 +290,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
     // save data for logs.
     await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-    [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+    [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
 
 
     return;
@@ -267,7 +381,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
        
 
   await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-            [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+            [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
 
 
 });
