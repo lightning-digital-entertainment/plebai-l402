@@ -20,7 +20,7 @@ export async function genPostImage() {
 
         const prompt:string = readRandomRow(process.env.UPLOAD_PATH + 'imageprompts.csv');
 
-        const imageURL = await createTxt2ImgWithPrompt(prompt, 'Juggernaut_XL', 768,512); //createSinkinImageWithPrompt(prompt + ' in portrait', '4zdwGOB');
+        const imageURL = await createTxt2ImgWithPrompt(prompt + ' blacklight makeup', 'sdxl_base_1.0', 1024,768); //createSinkinImageWithPrompt(prompt + ' in portrait', '4zdwGOB');
 
         console.log('ImageGen: ' +prompt + ' ' + imageURL );
 

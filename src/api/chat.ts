@@ -67,12 +67,14 @@ l402.post('/completions', async (req: Request, res: Response) => {
   let summaryTokens = ''
   const userMessage = body.messages[body.messages.length -1].content;
 
+      
+  const agentData:any = await getAgentById(body.system_purpose);
+
+  console.log('agentData: ', agentData);
+
 
   try {
-    
-        const agentData:any = await getAgentById(body.system_purpose);
 
-        console.log('agentData: ', agentData);
         const prompt = body.messages[body.messages.length -1].content;
 
         if (prompt === "'A lion turning back roaring'") {
@@ -125,6 +127,8 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
                 console.log(result.output.image_urls[0] );
 
+                summaryTokens = result.output.image_urls[0];
+
                 if (body?.stream) {
                   sendStream(JSON.stringify(createChatCompletion(result.output.image_urls[0], null, null)), res);
                   await sleep(1000);
@@ -146,33 +150,43 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
           if (agentData?.genimage) {
 
-              console.log('prompt: ', prompt)
+              try {
 
-              const lora = ' ' + agentData?.lora?agentData?.lora:'';
+                console.log('prompt: ', prompt)
 
-              const response: syncResponse = await createTxt2ImgWithPrompt((prompt +  lora), agentData.modelid, agentData.image_height?agentData.image_height:1024, agentData.image_width?agentData.image_width:1024);
-
-              if (response) {
-
-                if (body?.stream) {
-                  sendStream(JSON.stringify(createChatCompletion(response.output[0] , null, null)), res);
-                  await sleep(1000);
-                  endStream(res);
-                } else {
-                  res.send(response.output[0]);
-    
-                } 
+                const lora = ' ' + agentData?.lora?agentData?.lora:'';
+  
+                const response: syncResponse = await createTxt2ImgWithPrompt((prompt +  lora), agentData.modelid, agentData.image_height?agentData.image_height:1024, agentData.image_width?agentData.image_width:1024);
+  
+                if (response) {
+  
+                  if (body?.stream) {
+                    sendStream(JSON.stringify(createChatCompletion(response.output[0] , null, null)), res);
+                    await sleep(1000);
+                    endStream(res);
+                  } else {
+                    res.send(response.output[0]);
       
-                  // save data for logs.
-                  await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-                  [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  response.output[0], req.body  , req.body]);
+                  } 
+        
+                    // save data for logs.
+                    await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                    [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  response.output[0], req.body  , req.body]);
+  
+                    await createNIP94Event(response.output[0], null, body.messages[body.messages.length -1].content);
+                    
+                    
+  
+  
+                }
+                
+              } catch (error) {
 
-                  await createNIP94Event(response.output[0], null, body.messages[body.messages.length -1].content);
-                  
-                  return;
-
-
+                console.log(error);
+                
               }
+
+              return;
 
 
             
@@ -265,6 +279,8 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
       if (content === '') content = await createTogetherAIImageWithPrompt(prompt, 'stabilityai/stable-diffusion-xl-base-1.0', 1024,1024);
 
+      summaryTokens = content;
+
       if (body?.stream) {
         sendStream(JSON.stringify(createChatCompletion( content, null, null)), res);
       } else {
@@ -338,43 +354,87 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   if (body?.stream) {
 
-        const stream = await openai.chat.completions.create({
+        try {
 
-          messages,
-          model: body.llm_router,
-          max_tokens: body.max_tokens,
-          stream: true,
-          temperature: body.temperature
+          const stream = await openai.chat.completions.create({
 
-        });
+            messages,
+            model: body.llm_router,
+            max_tokens: body.max_tokens,
+            stream: true,
+            temperature: body.temperature
+  
+          });
+  
+          for await (const part of stream) {
+            summaryTokens = summaryTokens + part.choices[0]?.delta?.content
+            sendStream(JSON.stringify(createChatCompletion(part.choices[0]?.delta?.content, null, null)), res);
+          }
+  
+          if (body.system_purpose === 'Vivek2024') sendStream(JSON.stringify(createChatCompletion("\n\nTo donate to Vivek's campaign, Go to https://vivek2024.link/donate", null, null)), res);
+          
+        } catch (error) {
 
-        for await (const part of stream) {
-          summaryTokens = summaryTokens + part.choices[0]?.delta?.content
-          sendStream(JSON.stringify(createChatCompletion(part.choices[0]?.delta?.content, null, null)), res);
+          console.log(error)
+          
         }
 
-        if (body.system_purpose === 'Vivek2024') sendStream(JSON.stringify(createChatCompletion("\n\nTo donate to Vivek's campaign, Go to https://vivek2024.link/donate", null, null)), res);
+        if (agentData?.suggestion) {        
 
+          const questionStream = await openai.chat.completions.create({
+
+            messages: [
+              {"role": "system", "content": "can you suggest not more than two related conversational question for the user to ask back to you chatGPT? These questions have to be leading questions for the user to continue the conversation. respond with only questions and end each question with '\n'. Do not include hyphens or number ``` "},
+              {"role": "user", "content": summaryTokens + ' ```'}
+            ],
+            model: 'mistralai/mistral-7b-instruct',
+            max_tokens: 1024,
+            stream: false,
+            temperature: 0.1
+
+          });
+
+          sendStream(JSON.stringify(createChatCompletion("\nQuestions:- \n", null, null)), res);
+
+          sendStream(JSON.stringify(createChatCompletion(questionStream.choices[0].message.content, null, null)), res);
+
+
+
+        }
+
+        
         //end stream 
         endStream(res);
 
 
   } else {
 
-        const stream:any = await openai.chat.completions.create({
+        try {
 
-          messages,
-          model: body.llm_router,
-          max_tokens: body.max_tokens,
-          stream: false,
-          temperature: body.temperature
+          const stream:any = await openai.chat.completions.create({
 
-        });
+            messages,
+            model: body.llm_router,
+            max_tokens: body.max_tokens,
+            stream: false,
+            temperature: body.temperature
+  
+          });
+  
+          console.log('stream', stream)
+  
+          res.send(stream.choices[0].message.content);
+  
+          
+        } catch (error) {
 
-        console.log('stream', stream)
+          console.log(error);
 
-        res.send(stream.choices[0].message.content);
+          res.send('Error in getting response. Please try again later. ');
+          
+        }
 
+        
 
   }
 
