@@ -7,6 +7,8 @@ import * as dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import { writeFileSync } from 'fs'
 import { setTimeout } from 'timers/promises';
+import { Model, getModels } from '../modules/randomseed/txt2img';
+
 
 
 const data = Router();
@@ -82,9 +84,9 @@ data.post('/agents', async (req: Request, res: Response) => {
                 res.send({SystemPurposes})
 
         } else {
-                const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, nip05, category, CASE WHEN createtime < NOW() - INTERVAL '4 day' THEN 'false' ELSE 'true' END AS newagent FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '"+ req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
+                const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, nip05, category, restricted, CASE WHEN createtime < NOW() - INTERVAL '4 day' THEN 'false' ELSE 'true' END AS newagent FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '"+ req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
                 //const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, category  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
-                const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; newAgent: boolean, nip05:string, category:string }; }[] = [];
+                const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; newAgent: boolean, nip05:string, category:string, restricted:boolean }; }[] = [];
                 const dataOutput: { [key: string]: any } = {};
                 if (result.rows) {
                        
@@ -114,6 +116,7 @@ data.post('/agents', async (req: Request, res: Response) => {
                                                 newAgent: item.newagent,
                                                 nip05: item.nip05,
                                                 category: item.category,
+                                                restricted: item.restricted
                                                 
                                         },
 
@@ -123,7 +126,7 @@ data.post('/agents', async (req: Request, res: Response) => {
 
 
                         });
-                        console.log(agentData)   ;
+                        //console.log(agentData)   ;
                         agentData.forEach(item => {
                                 const key = Object.keys(item)[0];
                                 dataOutput[key] = item[key];
@@ -144,6 +147,26 @@ data.get('/prompts/:id/:limit/:offset', async (req: Request, res: Response) => {
 
 });
 
+data.get('/agent/name/:name', async (req: Request, res: Response) => {
+        console.log(req.params);
+        const name = decodeURIComponent(req.params.name);
+        console.log(name);
+        const result = await pgclient.query("select id, title from aiagents where title = '" + name + "' ");
+        if (result?.rows?.length === 0) {              
+                res.send({status: false});
+        } else {
+                res.send({status: true});
+        }
+
+});
+
+data.get('/models', async (req: Request, res: Response) => {
+
+        const getModelData:Model[] = await getModels();
+
+        res.send({getModelData});
+
+});
 data.post('/agents/all', async (req: Request, res: Response) => {
 
         console.log(req.body);
@@ -216,8 +239,8 @@ data.post('/agent', async (req: Request, res: Response) => {
                 res.send({error: 'ai agent not found'})
 
         } else {
-                const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05 FROM aiagents WHERE  id = '" + req.body.id + "'");
-                const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; newAgent: boolean, key_iv:string, key_content:string, nip05:string  }; }[] = [];
+                const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, category, commissionaddress, modelid, lora, image_height, image_width, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05 FROM aiagents WHERE  id = '" + req.body.id + "'");
+                const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; category: string, commissionAddress:string,  modelid:string, lora:string, image_height:number, image_width:number, newAgent: boolean, key_iv:string, key_content:string, nip05:string  }; }[] = [];
                 const dataOutput: { [key: string]: any } = {};
                 if (result.rows) {
                         result.rows.filter(item => {
@@ -245,7 +268,13 @@ data.post('/agent', async (req: Request, res: Response) => {
                                                 newAgent: item.newagent,
                                                 key_iv: item.key_iv,
                                                 key_content: item.key_content,
-                                                nip05: item.nip05
+                                                nip05: item.nip05,
+                                                category: item.category,
+                                                commissionAddress: item.commissionaddress,
+                                                modelid: item.modelid,
+                                                lora: item.lora,
+                                                image_height: item.image_height,
+                                                image_width: item.image_width
                                         },
 
                                 });
@@ -289,9 +318,16 @@ data.post('/agent/create', async (req: Request, res: Response) => {
                         if (!agent.temperature) agent.temperature = 0.8;
                         if (!agent.satsPay) agent.satsPay = 50;
                         if (!agent.commissionAddress)agent.commissionAddress = ''
+                        if (!agent.category)agent.category='Assistant'
+                        if (!agent.genimage) agent.genimage=false;
+                        if (!agent.modelid)  agent.modelid='';
+                        if (!agent.image_height)agent.image_height=0;
+                        if (!agent.image_wdith)agent.image_wdith=0;
+                        if (!agent.lora) agent.lora=''
+                        if (!agent.reqType) agent.reqType=''
 
-                        const result = await insertData("INSERT INTO aiagents (id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, commissionaddress) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)",
-                        [key, agent.title, agent.description, agent.systemMessage, agent.symbol, agent.examples, agent.placeHolder, agent.chatLLM,  agent.llmRouter, agent.convoCount, agent.maxToken, agent.temperature, agent.satsPay, agent.paid, agent.private, agent.status, agent.createdBy, agent.updatedBy, agent.commissionAddress ])
+                        const result = await insertData("INSERT INTO aiagents (id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, commissionaddress, category, genimage, modelid, lora, image_height, image_width, req_type ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)",
+                        [key, agent.title, agent.description, agent.systemMessage, agent.symbol, agent.examples, agent.placeHolder, agent.chatLLM,  agent.llmRouter, agent.convoCount, agent.maxToken, agent.temperature, agent.satsPay, agent.paid, agent.private, agent.status, agent.createdBy, agent.updatedBy, agent.commissionAddress, agent.category, agent.genimage, agent.modelid, agent.lora, agent.image_height, agent.image_wdith, agent.reqType ])
                         if (!result) return errorBadAuth(res);
                         console.log(Object.keys(agentData).length, count)
                         if (Object.keys(agentData).length === count) res.send({result: 'Update success'});
@@ -300,6 +336,8 @@ data.post('/agent/create', async (req: Request, res: Response) => {
 
 
 });
+
+
 
 
 export async function getAgentById (id: string):Promise<any>{

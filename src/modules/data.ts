@@ -24,7 +24,14 @@ export type SystemPurposeData = {
   createdBy: string;
   updatedBy: string;
   chatruns: number,
-  commissionAddress: string
+  commissionAddress: string,
+  category: string;
+  genimage:boolean,
+  modelid: string,
+  image_wdith: number,
+  image_height: number,
+  lora: string 
+  reqType:string
 }
 
 export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
@@ -48,7 +55,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
   },
   GenImage: {
     title: 'Gen Image AI ',
@@ -69,7 +83,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
   },
 
   SatsForDev: {
@@ -91,7 +112,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
   },
 
   DocGPT: {
@@ -113,7 +141,15 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
+   
   },
 
 
@@ -138,7 +174,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
   },
   PromptGenie: {
     title: 'Pickup Artist',
@@ -159,7 +202,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
   },
 
 
@@ -185,7 +235,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
 
   },
 
@@ -209,7 +266,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
 
   },
 
@@ -232,7 +296,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
 
   },
 
@@ -255,7 +326,14 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     createdBy: 'System001',
     updatedBy: 'System001',
     chatruns:1,
-    commissionAddress: ''
+    commissionAddress: '',
+    category:'Assistant',
+    genimage:true,
+    modelid: 'addModelId',
+    image_wdith: 512,
+    image_height: 512,
+    lora: '',
+    reqType:''
 
   },
 

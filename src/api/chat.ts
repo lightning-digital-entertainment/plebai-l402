@@ -77,42 +77,6 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
         const prompt = body.messages[body.messages.length -1].content;
 
-        if (prompt === "'A lion turning back roaring'") {
-          await sleep(3000);
-          sendStream(JSON.stringify(createChatCompletion('https://serve-model-sd-outputs.s3.amazonaws.com/839fd4ce-0f33-41f9-8760-f539f96c7f48.mp4', null, null)), res);
-          await sleep(1000);
-          endStream(res);
-
-          await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-          [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
-      
-          return;
-
-        }
-        if (prompt === "'A tiger walking in the beach'") {
-          await sleep(3000);
-          sendStream(JSON.stringify(createChatCompletion('https://serve-model-sd-outputs.s3.amazonaws.com/4d30245e-506e-44c5-a041-605e1bebd481.mp4', null, null)), res);
-          await sleep(1000);
-          endStream(res);
-
-          await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-          [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
-      
-          return;
-
-        }
-        if (prompt === "'20 year old girl running on the beach'") {
-          await sleep(3000);
-          sendStream(JSON.stringify(createChatCompletion('https://serve-model-sd-outputs.s3.amazonaws.com/7ee5ff14-c371-40e7-8ef8-3975c9477498.mp4', null, null)), res);
-          await sleep(1000);
-          endStream(res);
-
-          await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-          [body.messageId, body.conversationId,  body.app_fingerprint, body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
-      
-          return;
-
-        }
 
         if (agentData?.req_type !== null && agentData?.req_type === 'randomseed') {
 

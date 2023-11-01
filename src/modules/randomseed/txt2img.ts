@@ -7,8 +7,6 @@ import { ZepClient } from "@getzep/zep-js";
 import { loadQAStuffChain } from "langchain/chains";
 import { Document } from "langchain/document";
 import { asyncResponse, syncResponse, txt2imgRequest } from "./types";
-import axios from "axios";
-import * as fs from 'fs';
 import { setTimeout } from 'timers/promises';
 
 
@@ -211,40 +209,50 @@ export async function createPromptUsingChatGPT (prompt: string): Promise<string>
 }
 
 
-export async function getModels():Promise<string> {
+export async function getModels():Promise<Model[]> {
 
-
-    const axios = require('axios');
-    const qs = require('qs');
-    const data = qs.stringify({
-      'access_token': '24638a7ba9114a88be474f2116a551d0'
-    });
-
-    const config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: 'https://sinkin.ai/api/models',
+    const output = await fetch(process.env.RANDOM_SEED_API_URL + '/models', {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + process.env.RANDOM_SEED_API_KEY
       },
-      data
-    };
+    })
 
-    const response = await axios.request(config);
+    
+    const outputJson = await output.json();
+    
+    return (extractModels(outputJson));
 
-
-    // console.log(response.data.models.join(" "));
-
-    if (!response.data.models) return '';
-
-    return response.data.models.map((obj: { id: string; tags: []; }) => `${obj.id} (${obj.tags})`).join(" ");
-
-
-
+     
 
 
 
 
 }
+
+
+export type Model = {
+  model_name: string;
+  model_type: string;
+};
+
+
+const extractModels = (data: any): Model[] => {
+  const publicModels: Model[] = data.public_models.map((item: any) => ({
+    model_name: item.model_name,
+    model_type: item.model_type,
+  }));
+
+  const privateModels: Model[] = data.private_models.map((item: any) => ({
+    model_name: item.model_name,
+    model_type: item.model_type,
+  }));
+
+  return [...publicModels, ...privateModels];
+};
+
+
+
 
 
