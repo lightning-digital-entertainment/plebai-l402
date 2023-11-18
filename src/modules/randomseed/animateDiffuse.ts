@@ -43,14 +43,14 @@ export async function createAnimateDiffuseWithPrompt(prompt:string, modelName: s
     };
 
     console.log(data);
-  
+
     return  makeText2ImgRequest(data);
 
 
 }
 
 async function makeText2ImgRequest(data: txt2imgRequest): Promise<asyncResponse> {
-    
+
 
     const result = await fetch(process.env.RANDOM_SEED_API_URL + '/animate-diffusion', {
       method: 'POST',
@@ -62,15 +62,15 @@ async function makeText2ImgRequest(data: txt2imgRequest): Promise<asyncResponse>
     })
 
     if (result.status !== 200) {
-      //throw new Error(result.statusText)
+      // throw new Error(result.statusText)
       console.log(result.statusText);
       return null;
     }
 
     return await result.json()
 
-    
-    
+
+
 }
 
 

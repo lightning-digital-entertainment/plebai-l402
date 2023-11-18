@@ -25,12 +25,12 @@ export async function createSinkinImageWithPrompt(prompt:string, model: string):
 
         const data: SinkInRequest = {
             access_token: process.env.SINKIN_API,
-            model_id: model?model:'wozEgKm', 
+            model_id: model?model:'wozEgKm',
             prompt,
             num_images:1,
             width:512,
             height:768,
-            //lora
+            // lora
         };
 
         console.log(data);
@@ -49,7 +49,7 @@ export async function createSinkinImageWithPromptandLora(prompt:string, model: s
 
     const data: SinkInRequest = {
         access_token: process.env.SINKIN_API,
-        model_id: model?model:'wozEgKm', 
+        model_id: model?model:'wozEgKm',
         prompt,
         num_images:1,
         width:512,

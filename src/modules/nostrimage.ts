@@ -20,7 +20,7 @@ export async function genPostImage() {
 
         const prompt:string = readRandomRow(process.env.UPLOAD_PATH + 'imageprompts.csv');
 
-        const imageURL = await createTxt2ImgWithPrompt(prompt + ' blacklight makeup', 'sdxl_base_1.0', 1024,768); //createSinkinImageWithPrompt(prompt + ' in portrait', '4zdwGOB');
+        const imageURL = await createTxt2ImgWithPrompt(prompt + ' blacklight makeup', 'sdxl_base_1.0', 1024,768); // createSinkinImageWithPrompt(prompt + ' in portrait', '4zdwGOB');
 
         console.log('ImageGen: ' +prompt + ' ' + imageURL );
 
@@ -75,7 +75,7 @@ function getRandomInterval(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-const randomTime = getRandomInterval(1800000, 3600000); // between 1 to 3 minutes in milliseconds
+const randomTime = getRandomInterval(30000000, 36000000); // between 1 to 3 minutes in milliseconds
 
 const timerId = setInterval(() => {
     genPostImage();

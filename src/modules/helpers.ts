@@ -10,6 +10,7 @@ import FormData from 'form-data';
 import axios from "axios";
 import sharp from "sharp";
 import { IDocument } from "@getzep/zep-js";
+import * as url from 'url';
 
 export const relayIds = [
   'wss://relay.current.fyi',
@@ -300,6 +301,26 @@ export async function getImageUrl(id: string, outputFormat:string): Promise<stri
 
 }
 
+export async function deleteImageUrl(name: string) {
+
+
+  const data = JSON.stringify({name});
+
+  const config = {
+      method: 'post',
+      url: process.env.DELETE_URL,
+      headers: {
+        'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH,
+        'Content-Type': 'application/json',
+      },
+      data
+  };
+
+  axios.request(config);
+  // console.log(resp);
+
+}
+
 export async function getImageUrlFromFile(dir: string, file: string): Promise<string> {
 
 
@@ -459,6 +480,52 @@ export function errorBadAuth(res:any) {
     code: 1,
     message: 'bad auth',
   });
+}
+
+export function splitStringByUrl(inputString: string): string[] {
+
+  try {
+
+    const urlObject = url.parse(inputString);
+    const urlIndex = inputString.indexOf(urlObject.href!);
+
+    return [
+        inputString.slice(0, urlIndex).trim(),
+        urlObject.href!
+    ];
+
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+
+ }
+
+ export function extractUrls(text: string): string {
+  const urlRegex = /(\b(https):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+  const matches = text.match(urlRegex);
+
+  if (!matches) {
+    return '';
+  }
+
+  return matches.map(url => JSON.stringify({
+    type: "image_url",
+    image_url: {
+      "url": url
+    }
+  })).join(',\n');
+}
+
+export function extractUrl(text: string): string {
+  const urlRegex = /(\b(https):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+  const matches = text.match(urlRegex);
+
+  if (!matches) {
+    return '';
+  }
+
+  return matches[0];
 }
 
 

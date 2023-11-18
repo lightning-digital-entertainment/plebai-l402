@@ -8,7 +8,7 @@ import * as readline from 'readline';
 
 
 
-const zepApiUrl =  "";
+const zepApiUrl =  process.env.ZEP_API_URL;
 const collectionName = 'karera001';
 
 

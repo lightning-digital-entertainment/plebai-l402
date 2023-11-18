@@ -30,7 +30,7 @@ export type SystemPurposeData = {
   modelid: string,
   image_wdith: number,
   image_height: number,
-  lora: string 
+  lora: string
   reqType:string
 }
 
@@ -149,7 +149,7 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_height: 512,
     lora: '',
     reqType:''
-   
+
   },
 
 

@@ -30,6 +30,14 @@ const app_1 = require("./app");
 const path_1 = __importDefault(require("path"));
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
+process.on('uncaughtException', function (err) {
+    console.error(err);
+    console.log('Node NOT Exiting...');
+});
+process.on('unhandledRejection', function (err) {
+    console.error(err);
+    console.log('Node NOT Exiting...');
+});
 const port = process.env.PORT || 5001;
 app_1.app.listen(port, () => {
     // eslint-disable no-console

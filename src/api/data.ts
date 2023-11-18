@@ -23,12 +23,12 @@ const pubkey = async (nip05: string):Promise<string> => {
                 const invoiceResponse = await fetch('https://' + hostname + '/.well-known/nostr.json?name=' + encodeURIComponent(username), {method: 'GET'});
                 const responseJson = await invoiceResponse.json();
                 return responseJson?.names[username]?responseJson?.names[username]:''
-                
+
         } catch (error) {
 
                 console.log(error)
                 return ''
-                
+
         }
 
 
@@ -69,11 +69,11 @@ data.post('/upload', async (req: Request, res: Response) => {
                 const response =  await getImageUrl(id, req.body.type);
                 console.log(response);
                 res.send(({'url' : response}))
-                
+
         } catch (error) {
                 res.send({'error' : true})
         }
-        
+
 
 });
 data.post('/agents', async (req: Request, res: Response) => {
@@ -85,13 +85,13 @@ data.post('/agents', async (req: Request, res: Response) => {
 
         } else {
                 const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, nip05, category, restricted, CASE WHEN createtime < NOW() - INTERVAL '4 day' THEN 'false' ELSE 'true' END AS newagent FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '"+ req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
-                //const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, category  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
+                // const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, category  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
                 const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; newAgent: boolean, nip05:string, category:string, restricted:boolean }; }[] = [];
                 const dataOutput: { [key: string]: any } = {};
                 if (result.rows) {
-                       
+
                         result.rows.filter(async item => {
-                                //const getPubkey = await pubkey(item.nip05);
+                                // const getPubkey = await pubkey(item.nip05);
 
                                 agentData.push({
                                         [item.id]: {
@@ -117,7 +117,7 @@ data.post('/agents', async (req: Request, res: Response) => {
                                                 nip05: item.nip05,
                                                 category: item.category,
                                                 restricted: item.restricted
-                                                
+
                                         },
 
                                 });
@@ -126,12 +126,12 @@ data.post('/agents', async (req: Request, res: Response) => {
 
 
                         });
-                        //console.log(agentData)   ;
+                        // console.log(agentData)   ;
                         agentData.forEach(item => {
                                 const key = Object.keys(item)[0];
                                 dataOutput[key] = item[key];
                             });
-                         
+
                         res.send({SystemPurposes: dataOutput});
                 }
 
@@ -152,7 +152,7 @@ data.get('/agent/name/:name', async (req: Request, res: Response) => {
         const name = decodeURIComponent(req.params.name);
         console.log(name);
         const result = await pgclient.query("select id, title from aiagents where title = '" + name + "' ");
-        if (result?.rows?.length === 0) {              
+        if (result?.rows?.length === 0) {
                 res.send({status: false});
         } else {
                 res.send({status: true});
@@ -176,7 +176,7 @@ data.post('/agents/all', async (req: Request, res: Response) => {
 
         } else {
                 const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05 FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '"+ req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
-                //const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
+                // const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
                 const agentData: { [x: string]: { title: any; description: any; systemMessage: any; symbol: any; examples: any; placeHolder: any; chatLLM: any; llmRouter: any; convoCount: any; maxToken: any; temperature: any; satsPay: any; paid: any; private: any; status: any; createdBy: any; updatedBy: any; chatruns: number; newAgent: boolean, key_iv:string, key_content:string, nip05:string  }; }[] = [];
                 const dataOutput: { [key: string]: any } = {};
                 if (result.rows) {
@@ -346,7 +346,7 @@ export async function getAgentById (id: string):Promise<any>{
         const result = await pgclient.query("SELECT * from aiagents where id = '" + id + "';");
         return(result.rows[0]);
 
-} 
+}
 
 export async function getAnimateData (trackId: number):Promise<any>{
 
@@ -358,17 +358,17 @@ export async function getAnimateData (trackId: number):Promise<any>{
 
 
         }
-        
-} 
+
+}
 
 data.post('/agent/update', (req: Request, res: Response) => {
 
 
         console.log(req.body);
-      
+
         const columns = Object.keys(req.body);
         const values = Object.values(req.body);
-      
+
         const updateQuery = `UPDATE aiagents SET ${columns.map((column, index) => `${column} = $${index + 1}`).join(', ')} WHERE id = '` + req.body.id + `'`;
         console.log(updateQuery, values);
         pgclient.query(updateQuery, values, (err, result) => {
@@ -376,7 +376,7 @@ data.post('/agent/update', (req: Request, res: Response) => {
             console.error(err);
             res.status(500).send('Error updating table');
           } else {
-            console.log(result);    
+            console.log(result);
             res.send(result);
           }
         });
@@ -403,8 +403,8 @@ data.post('/feedback', async (req: Request, res: Response) => {
         [req.body.feedback_type, req.body.message_id]);
         const response = {status: 'all good'};
         res.send(response);
-      
-      
+
+
 });
 
 

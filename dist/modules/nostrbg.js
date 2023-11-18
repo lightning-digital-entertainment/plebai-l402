@@ -88,7 +88,7 @@ function genPostImage() {
 function getRandomInterval(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-const randomTime = getRandomInterval(1800000, 3600000); // between 1 to 3 minutes in milliseconds
+const randomTime = getRandomInterval(30000000, 36000000); // between 1 to 3 minutes in milliseconds
 const timerId = setInterval(() => {
     genPostImage();
 }, randomTime);

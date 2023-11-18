@@ -6,7 +6,7 @@ import { PromptTemplate } from 'langchain/prompts'
 import { ZepClient } from "@getzep/zep-js";
 import { loadQAStuffChain } from "langchain/chains";
 import { Document } from "langchain/document";
-import { asyncResponse, syncResponse, txt2imgRequest } from "./types";
+import { asyncResponse, backResponse, syncResponse, txt2imgRequest } from "./types";
 import { setTimeout } from 'timers/promises';
 
 
@@ -34,7 +34,7 @@ export async function createTxt2ImgWithPrompt(prompt:string, model: string, heig
       number_of_images: 1,
       seed: -1,
       sampler_name: "DPM++ 2M Karras",
- 
+
     };
 
     console.log(data);
@@ -46,7 +46,7 @@ export async function createTxt2ImgWithPrompt(prompt:string, model: string, heig
 }
 
 async function makeText2ImgRequest(data: txt2imgRequest): Promise<syncResponse> {
-    
+
 
     const result = await fetch(process.env.RANDOM_SEED_API_URL + '/sync/txt2img', {
       method: 'POST',
@@ -64,12 +64,41 @@ async function makeText2ImgRequest(data: txt2imgRequest): Promise<syncResponse> 
 
     return await result.json()
 
-    
-    
+
+
 }
 
+export async function removeBackground(prompt: string): Promise<backResponse> {
+
+  const data = {"remove_bg": {
+    "image_url": prompt
+      }
+    }
+
+  const result = await fetch(process.env.RANDOM_SEED_API_URL + '/remove-background', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + process.env.RANDOM_SEED_API_KEY
+    },
+  })
+
+  if (result.status !== 200) {
+    console.log(result.statusText);
+    return null;
+  }
+
+  return await result.json()
+
+
+
+}
+
+
+
 async function makeText2ImgRequestAsync(data: txt2imgRequest): Promise<syncResponse> {
-    
+
 
   const result = await fetch(process.env.RANDOM_SEED_API_URL + '/txt2img', {
     method: 'POST',
@@ -101,7 +130,7 @@ async function makeText2ImgRequestAsync(data: txt2imgRequest): Promise<syncRespo
 
           const outputJson = await output.json();
 
-          //console.log('outputJson: ', outputJson);
+          // console.log('outputJson: ', outputJson);
 
           if (outputJson.status === 'COMPLETED') {
 
@@ -127,7 +156,7 @@ async function makeText2ImgRequestAsync(data: txt2imgRequest): Promise<syncRespo
 
           }
 
-          
+
 
           await setTimeout(1000);
         }
@@ -136,10 +165,10 @@ async function makeText2ImgRequestAsync(data: txt2imgRequest): Promise<syncRespo
 
   }
 
-  
 
-  
-  
+
+
+
 }
 
 
@@ -219,12 +248,12 @@ export async function getModels():Promise<Model[]> {
       },
     })
 
-    
+
     const outputJson = await output.json();
-    
+
     return (extractModels(outputJson));
 
-     
+
 
 
 

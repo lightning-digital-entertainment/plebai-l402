@@ -36,7 +36,7 @@ exports.getResults = exports.printResults = exports.naiveSplitText = exports.rea
 const fs = __importStar(require("fs"));
 const zep_js_1 = require("@getzep/zep-js");
 const readline = __importStar(require("readline"));
-const zepApiUrl = "";
+const zepApiUrl = process.env.ZEP_API_URL;
 const collectionName = 'medical202301';
 function createCollection() {
     return __awaiter(this, void 0, void 0, function* () {

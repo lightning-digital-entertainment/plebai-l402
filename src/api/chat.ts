@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import { Memory, Message} from '@getzep/zep-js';
 import { SerpAPI } from "langchain/tools";
 import { Lsat } from '../modules/l402js'
-import { generateRandom9DigitNumber, getBase64ImageFromURL, getImageUrl, getLsatToChallenge, saveBase64AsImageFile, sendHeaders, vetifyLsatToken } from '../modules/helpers';
+import { deleteImageUrl, extractUrl, extractUrls, generateRandom9DigitNumber, getBase64ImageFromURL, getImageUrl, getLsatToChallenge, saveBase64AsImageFile, sendHeaders, splitStringByUrl, vetifyLsatToken } from '../modules/helpers';
 import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { Document, IDocument,ZepClient } from "@getzep/zep-js";
@@ -15,8 +15,10 @@ import {removeKeyword} from '../modules/helpers'
 import { getAgentById, getAnimateData, insertData } from './data';
 import { createSinkinImageWithPrompt, createSinkinImageWithPromptandLora } from '../modules/sinkin/createimage';
 import { createAnimateDiffuseWithPrompt } from '../modules/randomseed/animateDiffuse';
-import { createTxt2ImgWithPrompt } from '../modules/randomseed/txt2img';
-import { syncResponse } from '../modules/randomseed/types';
+import { createTxt2ImgWithPrompt, removeBackground } from '../modules/randomseed/txt2img';
+import { backResponse, syncResponse } from '../modules/randomseed/types';
+import { RunStep } from 'openai/resources/beta/threads/runs/steps';
+import {  textResponseWithZep, visionResponse } from '../modules/openai/chatCompletion';
 
 
 dotenv.config();
@@ -50,9 +52,20 @@ const createChatCompletion = (content: string | null, role: string | null, finis
 const l402 = Router();
 
 const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+
+});
+
+const openRouter = new OpenAI({
   apiKey: process.env.ROUTER_API_KEY,
   baseURL: process.env.ROUTER_URL,
   defaultHeaders: { "HTTP-Referer": process.env.PLEBAI_URL ,"X-Title": 'PlebAI' },
+
+});
+
+const gputopia = new OpenAI({
+  apiKey: process.env.GPUTOPIA_API_KEY,
+  baseURL:process.env.GPUTOPIA_WEBHOOK_URL,
 
 });
 
@@ -62,12 +75,12 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
   console.log('body: ', body);
 
-  
+
 
   let summaryTokens = ''
   const userMessage = body.messages[body.messages.length -1].content;
 
-      
+
   const agentData:any = await getAgentById(body.system_purpose);
 
   console.log('agentData: ', agentData);
@@ -77,8 +90,155 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
         const prompt = body.messages[body.messages.length -1].content;
 
+        if (agentData?.req_type !== null && agentData?.req_type === 'openai') {
+
+          let response:any = null;
+
+          try {
+
+                    if (agentData?.modelid && agentData?.modelid.startsWith('thread_')) {
+
+                           response = await textResponseWithZep(agentData, body.messages);
+
+
+                    } else
+
+                    {
+                          body.messages[body.messages.length -1].content =
+                          [
+                              {"type": "text", "text": prompt },
+                              JSON.parse(extractUrls(prompt)),
+                          ];
+
+                            console.log(body.messages[body.messages.length -1].content );
+                            const result  = await visionResponse(agentData?.llmrouter, body.messages);
+                            response = result.choices[0].message.content;
+
+                            // delete the uploaded image if it our S3.
+                            body.messages[body.messages.length -1].content.filter((item: { type: string; image_url: { url: any; }; }) => item.type === 'image_url' && item.image_url?.url)
+                              .map(async (item: { image_url: { url: string; }; }) => await deleteImageUrl(item.image_url.url));
+
+                    }
+
+
+
+
+
+            } catch (error) {
+
+              console.log(error);
+
+            }
+
+
+          if (response) {
+
+            console.log(response);
+
+            if (body?.stream) {
+              sendStream(JSON.stringify(createChatCompletion(response , null, null)), res);
+              await sleep(1000);
+              endStream(res);
+            } else {
+              res.send(response);
+
+            }
+
+            // save data for logs.
+            await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  response, req.body  , req.body]);
+
+            return;
+
+
+          }
+
+
+
+        }
+
+        if (agentData?.req_type !== null && agentData?.req_type === 'gputopia') {
+
+          let response:any = null;
+
+          try {
+
+            response = await gputopia.chat.completions.create({
+              model: "TheBloke/vicuna-7B-v1.5-GGUF:Q4_K_M",  // "TheBloke/vicuna-7B-v1.5-GGUF:Q4_K_M"
+              messages: body.messages
+            });
+
+          } catch (error) {
+
+            /*
+            response = {
+
+              choices: [ { index: 0, message: {role: 'assistant',
+              content: "An error occured when accessing GPUtopia. instead, here is a joke to make you laugh. Why don't computers make good comedians? Because they can't handle a hard drive crash without losing their memory! "}, finish_reason: 'stop' } ]
+            }
+
+            */
+            console.log(error);
+
+          }
+
+
+
+          if (response) {
+
+            if (body?.stream) {
+              sendStream(JSON.stringify(createChatCompletion(response.choices[0].message.content.trim() , null, null)), res);
+              await sleep(1000);
+              endStream(res);
+            } else {
+              res.send(response.choices[0].message.content.trim());
+
+            }
+
+            // save data for logs.
+            await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  response.choices[0].message.content.trim(), req.body  , req.body]);
+
+
+            return;
+
+
+          }
+
+
+
+        }
+
 
         if (agentData?.req_type !== null && agentData?.req_type === 'randomseed') {
+
+          if (agentData?.modelid === 'remove-background') {
+
+            const response:backResponse = await removeBackground(extractUrl(prompt));
+
+            if (!response || !response.image_url) response.image_url = 'With a roaring thunder, Image generation failed. To request refund, Please contact us on Discord. ';
+
+            summaryTokens = response.image_url;
+
+            if (body?.stream) {
+              sendStream(JSON.stringify(createChatCompletion(response.image_url, null, null)), res);
+              await sleep(1000);
+              endStream(res);
+            } else {
+              res.send(response.image_url);
+
+            }
+
+              // save data for logs.
+            await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
+
+
+            return;
+
+
+
+          }
 
           if (agentData?.genanimation) {
 
@@ -99,14 +259,14 @@ l402.post('/completions', async (req: Request, res: Response) => {
                   endStream(res);
                 } else {
                   res.send(result.output.image_urls[0]);
-    
-                } 
-      
+
+                }
+
                   // save data for logs.
                   await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
                   [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
-              
-                  
+
+
                   return;
 
             }
@@ -119,41 +279,41 @@ l402.post('/completions', async (req: Request, res: Response) => {
                 console.log('prompt: ', prompt)
 
                 const lora = ' ' + agentData?.lora?agentData?.lora:'';
-  
+
                 const response: syncResponse = await createTxt2ImgWithPrompt((prompt +  lora), agentData.modelid, agentData.image_height?agentData.image_height:1024, agentData.image_width?agentData.image_width:1024);
-  
+
                 if (response) {
-  
+
                   if (body?.stream) {
                     sendStream(JSON.stringify(createChatCompletion(response.output[0] , null, null)), res);
                     await sleep(1000);
                     endStream(res);
                   } else {
                     res.send(response.output[0]);
-      
-                  } 
-        
+
+                  }
+
                     // save data for logs.
                     await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
                     [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  response.output[0], req.body  , req.body]);
-  
+
                     await createNIP94Event(response.output[0], null, body.messages[body.messages.length -1].content);
-                    
-                    
-  
-  
+
+
+
+
                 }
-                
+
               } catch (error) {
 
                 console.log(error);
-                
+
               }
 
               return;
 
 
-            
+
           }
 
 
@@ -161,16 +321,16 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
         }
 
-       
+
 
         if (agentData && agentData?.genimage && agentData?.modelid) {
 
-              
+
           try {
 
-            
+
             let content = '';
-            
+
             if (agentData?.lora) {
 
               if (content === '') content = await createSinkinImageWithPromptandLora(prompt, agentData.modelid, agentData.lora);
@@ -178,7 +338,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
               if (content === '') content = await createSinkinImageWithPrompt(prompt, agentData.modelid);
             }
-            
+
             const imageString = await getBase64ImageFromURL(content);
             const id = uuidv4();
             saveBase64AsImageFile(id + '.png', imageString);
@@ -191,24 +351,24 @@ l402.post('/completions', async (req: Request, res: Response) => {
               res.send(currentImageString);
 
             }
-   
-            
+
+
 
             await createNIP94Event(currentImageString, null, body.messages[body.messages.length -1].content);
 
-            
+
           } catch (error) {
-            
+
             console.log(error)
           }
-      
+
           if (body?.stream) endStream(res);
-      
+
           // save data for logs.
           await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
           [body.messageId, body.conversationId, body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
-      
-          
+
+
           return;
 
 
@@ -219,7 +379,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
   } catch (error) {
 
     console.log('In catch checking if it is genImage agent: ', error)
-    
+
   }
 
 
@@ -251,7 +411,7 @@ l402.post('/completions', async (req: Request, res: Response) => {
         res.send(content);
 
       }
-      
+
 
       await createNIP94Event(content, null, body.messages[body.messages.length -1].content);
 
@@ -276,23 +436,24 @@ l402.post('/completions', async (req: Request, res: Response) => {
     return;
 
   }
-  if (body.system_purpose === 'Vivek2024' || body.system_purpose === 'DocGPT') {
 
-    console.log('inside Vivek');
+   if(agentData.getzep)
+   {
 
-    const client = await ZepClient.init(process.env.ZEP_API_URL);
-    const collection = await client.document.getCollection(body.system_purpose === 'Vivek2024'?process.env.COLLECTION_NAME:process.env.MEDICAL_COLLECTION_NAME);
-
-    let searchResult = '';
-
+    console.log('getting embedding data from Zep');
 
     try {
+
+      const client = await ZepClient.init(process.env.ZEP_API_URL);
+      const collection = await client.document.getCollection(agentData.collectionname?agentData.collectionname:'');
+
+      let searchResult = '';
 
       const searchResults = await collection.search(
         {
            text: body.messages[body.messages.length -1].content,
         },
-        5
+        3
       );
       console.log(
           `Found ${searchResults.length} documents matching query '${body.messages[body.messages.length -1].content}'`
@@ -320,32 +481,32 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
         try {
 
-          const stream = await openai.chat.completions.create({
+          const stream = await openRouter.chat.completions.create({
 
             messages,
             model: body.llm_router,
             max_tokens: body.max_tokens,
             stream: true,
             temperature: body.temperature
-  
+
           });
-  
+
           for await (const part of stream) {
             summaryTokens = summaryTokens + part.choices[0]?.delta?.content
             sendStream(JSON.stringify(createChatCompletion(part.choices[0]?.delta?.content, null, null)), res);
           }
-  
+
           if (body.system_purpose === 'Vivek2024') sendStream(JSON.stringify(createChatCompletion("\n\nTo donate to Vivek's campaign, Go to https://vivek2024.link/donate", null, null)), res);
-          
+
         } catch (error) {
 
           console.log(error)
-          
+
         }
 
-        if (agentData?.suggestion) {        
+        if (agentData?.suggestion) {
 
-          const questionStream = await openai.chat.completions.create({
+          const questionStream = await openRouter.chat.completions.create({
 
             messages: [
               {"role": "system", "content": "can you suggest not more than two related conversational question for the user to ask back to you chatGPT? These questions have to be leading questions for the user to continue the conversation. respond with only questions and end each question with '\n'. Do not include hyphens or number ``` "},
@@ -366,8 +527,8 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
         }
 
-        
-        //end stream 
+
+        // end stream
         endStream(res);
 
 
@@ -375,34 +536,34 @@ l402.post('/completions', async (req: Request, res: Response) => {
 
         try {
 
-          const stream:any = await openai.chat.completions.create({
+          const stream:any = await openRouter.chat.completions.create({
 
             messages,
             model: body.llm_router,
             max_tokens: body.max_tokens,
             stream: false,
             temperature: body.temperature
-  
+
           });
-  
+
           console.log('stream', stream)
-  
+
           res.send(stream.choices[0].message.content);
-  
-          
+
+
         } catch (error) {
 
           console.log(error);
 
           res.send('Error in getting response. Please try again later. ');
-          
+
         }
 
-        
+
 
   }
 
-       
+
 
   await insertData("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
             [body.messageId, body.conversationId,  body.app_fingerprint?body.app_fingerprint:uuidv4(), body.llm_router, body.system_purpose, userMessage.length > 2000?userMessage.substring(0,1998):userMessage,  summaryTokens, req.body, req.body]);
@@ -438,7 +599,7 @@ interface Conversation {
 
 
 async function sendStream(data:string, res:Response) {
-  
+
   res.write(`event: completion \n`);
   res.write(`data: ${data}\n\n`);
 }

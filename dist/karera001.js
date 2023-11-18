@@ -35,7 +35,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getResults = exports.printResults = exports.naiveSplitText = exports.readChunkFromFile = void 0;
 const fs = __importStar(require("fs"));
 const zep_js_1 = require("@getzep/zep-js");
-const zepApiUrl = "";
+const zepApiUrl = process.env.ZEP_API_URL;
 const collectionName = 'karera001';
 function createCollection() {
     return __awaiter(this, void 0, void 0, function* () {

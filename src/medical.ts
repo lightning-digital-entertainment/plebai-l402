@@ -8,7 +8,7 @@ import * as readline from 'readline';
 
 
 
-const zepApiUrl =  "";
+const zepApiUrl =  process.env.ZEP_API_URL;
 const collectionName = 'medical202301';
 
 
@@ -175,8 +175,6 @@ async function uploadDocuments() {
             console.log(
                `Added ${uuids.length} documents to collection ${collectionName}`
             );
-
-
 
    });
 

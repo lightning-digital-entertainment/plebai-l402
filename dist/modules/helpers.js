@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorServer = exports.errorAdultcontent = exports.errorUnauthorized = exports.errorBadArguments = exports.errorInvoicePaid = exports.errorBadAuth = exports.removeKeyword = exports.getResults = exports.saveBase64AsImageFile = exports.getBase64ImageFromURL = exports.closestMultipleOf256 = exports.findBestMatch = exports.getImageUrlFromFile = exports.getImageUrl = exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom5DigitNumber = exports.generateRandom9DigitNumber = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.ModelIds = exports.relayIds = void 0;
+exports.errorServer = exports.errorAdultcontent = exports.errorUnauthorized = exports.errorBadArguments = exports.errorInvoicePaid = exports.extractUrl = exports.extractUrls = exports.splitStringByUrl = exports.errorBadAuth = exports.removeKeyword = exports.getResults = exports.saveBase64AsImageFile = exports.getBase64ImageFromURL = exports.closestMultipleOf256 = exports.findBestMatch = exports.getImageUrlFromFile = exports.deleteImageUrl = exports.getImageUrl = exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom5DigitNumber = exports.generateRandom9DigitNumber = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.ModelIds = exports.relayIds = void 0;
 const alby_tools_1 = require("alby-tools");
 const l402js_1 = require("./l402js");
 const Macaroon = __importStar(require("macaroon"));
@@ -46,6 +46,7 @@ const fs_1 = require("fs");
 const form_data_1 = __importDefault(require("form-data"));
 const axios_1 = __importDefault(require("axios"));
 const sharp_1 = __importDefault(require("sharp"));
+const url = __importStar(require("url"));
 exports.relayIds = [
     'wss://relay.current.fyi',
     'wss://nostr1.current.fyi',
@@ -278,6 +279,23 @@ function getImageUrl(id, outputFormat) {
     });
 }
 exports.getImageUrl = getImageUrl;
+function deleteImageUrl(name) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const data = JSON.stringify({ name });
+        const config = {
+            method: 'post',
+            url: process.env.DELETE_URL,
+            headers: {
+                'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH,
+                'Content-Type': 'application/json',
+            },
+            data
+        };
+        axios_1.default.request(config);
+        // console.log(resp);
+    });
+}
+exports.deleteImageUrl = deleteImageUrl;
 function getImageUrlFromFile(dir, file) {
     return __awaiter(this, void 0, void 0, function* () {
         const form = new form_data_1.default();
@@ -412,6 +430,44 @@ function errorBadAuth(res) {
     });
 }
 exports.errorBadAuth = errorBadAuth;
+function splitStringByUrl(inputString) {
+    try {
+        const urlObject = url.parse(inputString);
+        const urlIndex = inputString.indexOf(urlObject.href);
+        return [
+            inputString.slice(0, urlIndex).trim(),
+            urlObject.href
+        ];
+    }
+    catch (error) {
+        console.log(error);
+        return null;
+    }
+}
+exports.splitStringByUrl = splitStringByUrl;
+function extractUrls(text) {
+    const urlRegex = /(\b(https):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+    const matches = text.match(urlRegex);
+    if (!matches) {
+        return '';
+    }
+    return matches.map(url => JSON.stringify({
+        type: "image_url",
+        image_url: {
+            "url": url
+        }
+    })).join(',\n');
+}
+exports.extractUrls = extractUrls;
+function extractUrl(text) {
+    const urlRegex = /(\b(https):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+    const matches = text.match(urlRegex);
+    if (!matches) {
+        return '';
+    }
+    return matches[0];
+}
+exports.extractUrl = extractUrl;
 function errorDailyLimit(res) {
     return res.status(400).send({
         error: true,

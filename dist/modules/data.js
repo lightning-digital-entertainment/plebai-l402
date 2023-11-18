@@ -20,7 +20,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     GenImage: {
         title: 'Gen Image AI ',
@@ -39,7 +48,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     SatsForDev: {
         title: 'CodeGPT',
@@ -58,7 +76,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     DocGPT: {
         title: 'DocGPT',
@@ -77,7 +104,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     Vivek2024: {
         title: 'Ask Vivek 2024 ',
@@ -96,7 +132,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     PromptGenie: {
         title: 'Pickup Artist',
@@ -115,7 +160,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     PodChat: {
         title: 'AngryGPT',
@@ -134,7 +188,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     Editor: {
         title: 'English Editor',
@@ -153,7 +216,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     Emoji: {
         title: 'EmojiGPT',
@@ -172,7 +244,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
     RoastMaster: {
         title: 'Roast Master',
@@ -191,7 +272,16 @@ exports.SystemPurposes = {
         private: false,
         status: 'active',
         createdBy: 'System001',
-        updatedBy: 'System001'
+        updatedBy: 'System001',
+        chatruns: 1,
+        commissionAddress: '',
+        category: 'Assistant',
+        genimage: true,
+        modelid: 'addModelId',
+        image_wdith: 512,
+        image_height: 512,
+        lora: '',
+        reqType: ''
     },
 };
 //# sourceMappingURL=data.js.map

@@ -71,3 +71,7 @@ typings/
 
 # Serverless directories
 .serverless
+
+**/dist/
+dist/api
+dist/modules

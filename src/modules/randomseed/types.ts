@@ -1,5 +1,5 @@
 export type txt2imgRequest = {
-    
+
     model_name: string;
     prompt: string;
     width?: number;
@@ -68,6 +68,10 @@ export type asyncResponse = {
 export type syncResponse = {
     message?: string;
     output?:string[]
+};
+
+export type backResponse = {
+    image_url?: string;
 };
 
 type ImageResponse = {

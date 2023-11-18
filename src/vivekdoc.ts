@@ -7,7 +7,7 @@ import * as path from 'path';
 
 
 
-const zepApiUrl =  "";
+const zepApiUrl =  process.env.ZEP_API_URL;
 const collectionName = '';
 
 

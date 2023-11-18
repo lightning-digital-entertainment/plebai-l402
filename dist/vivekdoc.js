@@ -38,7 +38,7 @@ const youtube_transcript_1 = require("youtube-transcript");
 const fs = __importStar(require("fs"));
 const zep_js_1 = require("@getzep/zep-js");
 const path = __importStar(require("path"));
-const zepApiUrl = "";
+const zepApiUrl = process.env.ZEP_API_URL;
 const collectionName = '';
 function getYttranscripts() {
     return __awaiter(this, void 0, void 0, function* () {
