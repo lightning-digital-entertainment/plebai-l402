@@ -1,33 +1,46 @@
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 import { Document, IDocument,ZepClient } from "@getzep/zep-js";
+import * as dotenv from 'dotenv';
 
+dotenv.config();
+const collectionName = 'airmen2';
 
-
-const zepApiUrl =  process.env.ZEP_API_URL;
-const collectionName = '41699669372';
-
-const loader = new PDFLoader("/Users/arunnedunchezian/Downloads/nostr.how.pdf");
-
-
+const loader = new PDFLoader("/Users/arunnedunchezian/Downloads/faapilot/airplane-flying.pdf");
+const zepApiUrl = process.env.ZEP_API_URL;
+let zepClient: any;
+zepClient = ZepClient.init(process.env.ZEP_API_URL, process.env.ZEP_API_KEY)
+                      .then(resolvedClient => {
+                        zepClient = resolvedClient
+                          console.log('Connected to Zep...')
+                      })
+                      .catch(error => {
+                          console.log('Error connecting to Zep')
+                      });
 
 async function createCollection() {
 
-
+   const client = await ZepClient.init(zepApiUrl, process.env.ZEP_API_KEY);
 
     console.log(`Creating collection ${collectionName}`);
 
-    const client = await ZepClient.init(zepApiUrl);
+
+   try {
+
+      const collection = await client.document.addCollection({
+         name: collectionName,
+         embeddingDimensions: 768, // this must match the embedding dimensions of your embedding model
+         description: "pilot Airmen testing, faqs", // optional
+         metadata: { 'title': 'pilot Airmen testing, faqs' }, // optional
+         isAutoEmbedded: true, // optional (default: true) - whether Zep should  automatically embed documents
+      });
+
+      console.log(collection);
+
+   } catch (error) {
+      console.log(error);
+   }
 
 
-    const collection = await client.document.addCollection({
-       name: collectionName,
-       embeddingDimensions: 1536, // this must match the embedding dimensions of your embedding model
-       description: "vivek2024 campaign", // optional
-       metadata: { 'title': 'Vivek interview Youtube transacript' }, // optional
-       isAutoEmbedded: true, // optional (default: true) - whether Zep should  automatically embed documents
-    });
-
-    console.log(collection);
 
     await uploadDocuments();
 
@@ -36,33 +49,43 @@ async function createCollection() {
 
 async function uploadDocuments() {
 
-    const client = await ZepClient.init(zepApiUrl);
-    const collection = await client.document.getCollection(collectionName);
+
+    const collection = await zepClient.document.getCollection(collectionName);
 
     const docs = await loader.load();
 
 
 
     const documents = docs.map(
-        (chunk) =>
+        async (chunk) => {
+                  const docpage = new Document({
 
-           new Document({
+                     content: chunk.pageContent,
+                     // document_id: filename, // optional document ID used in your system
+                     metadata: chunk.metadata, // optional metadata
+                  })
 
-              content: chunk.pageContent,
-              // document_id: filename, // optional document ID used in your system
-              metadata: chunk.metadata, // optional metadata
-           })
+                  /* const uuids = await collection.addDocuments(docpage);
+
+                  console.log(
+                     `Added ${uuids.length} documents to collection ${collectionName}`
+                  ); */
+
+                  console.log(docpage);
+
+                  await sleep(2000);
+
+
+        }
+
+
         );
 
-    console.log(docs);
 
-    const uuids = await collection.addDocuments(documents);
 
-    console.log(
-        `Added ${uuids.length} documents to collection ${collectionName}`
-     );
 
-    await checkEmbeddingStatus(client, collectionName);
+
+    await checkEmbeddingStatus(zepClient, collectionName);
 
     await checkStatus();
 
@@ -78,10 +101,10 @@ createCollection();
 
 async function checkStatus() {
 
-    const client = await ZepClient.init(zepApiUrl);
-    await checkEmbeddingStatus(client, collectionName);
 
-    const collection = await client.document.getCollection(collectionName);
+    await checkEmbeddingStatus(zepClient, collectionName);
+
+    const collection = await zepClient.document.getCollection(collectionName);
 
         // Index the collection
         console.log(`Indexing collection ${collectionName}`);
@@ -120,36 +143,33 @@ async function checkEmbeddingStatus(
     }
  }
 
+ function sleep(ms: number) {
+   return new Promise((resolve) => {
+     setTimeout(resolve, ms);
+   });
+ }
+
  async function queryDocs() {
 
-    const client = await ZepClient.init(zepApiUrl);
+   const client = await ZepClient.init(zepApiUrl, process.env.ZEP_API_KEY);
     const collection = await client.document.getCollection(collectionName);
 
 
 
-    const query = "How do I install the Alby Browser Extension? ";
+    const query = "pet policy ";
     const searchResults = await collection.search(
        {
           text: query,
+          searchType: "mmr",
+          mmrLambda: 0.5,
        },
-       3
+       3,
+
     );
     console.log(
        `Found ${searchResults.length} documents matching query '${query}'`
     );
     printResults(searchResults);
-
-    const newSearchResults = await collection.search(
-        {
-           text: query
-        },
-        3
-     );
-     console.log(
-        `Found ${newSearchResults.length} documents matching query '${query}'`
-     );
-     printResults(newSearchResults);
-
 
 
 

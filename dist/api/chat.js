@@ -44,11 +44,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const dotenv = __importStar(require("dotenv"));
+const zep_js_1 = require("@getzep/zep-js");
 const helpers_1 = require("../modules/helpers");
 const openai_1 = __importDefault(require("openai"));
 const uuid_1 = require("uuid");
-const zep_js_1 = require("@getzep/zep-js");
-const vivekdoc_1 = require("../vivekdoc");
+const zep_js_2 = require("@getzep/zep-js");
 const createEvent_1 = require("../modules/nip94event/createEvent");
 require("websocket-polyfill");
 const createimage_1 = require("../modules/togetherai/createimage");
@@ -58,10 +58,24 @@ const createimage_2 = require("../modules/sinkin/createimage");
 const animateDiffuse_1 = require("../modules/randomseed/animateDiffuse");
 const txt2img_1 = require("../modules/randomseed/txt2img");
 const chatCompletion_1 = require("../modules/openai/chatCompletion");
+const createText_1 = require("../modules/perplexity/createText");
+const tavily_search_api_1 = require("langchain/retrievers/tavily_search_api");
+const videoGen_1 = require("../modules/replicate/videoGen");
+const upscaleGen_1 = require("../modules/replicate/upscaleGen");
+const photoMaker_1 = require("../modules/replicate/photoMaker");
+const generateText_1 = require("../modules/premai/generateText");
 dotenv.config();
 const wordRegex = /\s+/g;
-const sessionId = "";
 // const zepClient = new ZepClient(process.env.ZEP_API_URL, process.env.OPENAI_API_KEY);
+let zepClient;
+zepClient = zep_js_2.ZepClient.init(process.env.ZEP_API_URL, process.env.ZEP_API_KEY)
+    .then(resolvedClient => {
+    zepClient = resolvedClient;
+    console.log('Connected to Zep...');
+})
+    .catch(error => {
+    console.log('Error connecting to Zep');
+});
 const createChatCompletion = (content, role, finishReason) => {
     const id = (0, uuid_1.v4)();
     return {
@@ -100,11 +114,192 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
     const body = req.body;
     console.log('body: ', body);
     let summaryTokens = '';
-    const userMessage = body.messages[body.messages.length - 1].content;
     const agentData = yield (0, data_1.getAgentById)(body.system_purpose);
     console.log('agentData: ', agentData);
+    let userID;
+    try {
+        userID = yield zepClient.user.get(body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)());
+    }
+    catch (error) {
+        console.log('Going to create new user...');
+        const newUser = {
+            user_id: body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(),
+            metadata: { agent: body.system_purpose, createdDate: Date.now() },
+        };
+        userID = yield zepClient.user.add(newUser);
+    }
+    console.log('Zep user: ', JSON.stringify(userID));
     try {
         const prompt = body.messages[body.messages.length - 1].content;
+        try {
+            if (agentData === null || agentData === void 0 ? void 0 : agentData.iresearch) {
+                const retriever = new tavily_search_api_1.TavilySearchAPIRetriever({
+                    searchDepth: "advanced",
+                    apiKey: process.env.TAVILY_API_KEY,
+                    k: 3,
+                });
+                const retrievedDocs = yield retriever.getRelevantDocuments(' Get relevant company information for ' + agentData.title + ' and the user question is ' + prompt);
+                console.log({ retrievedDocs });
+                body.messages[0].content = body.messages[0].content.replace('{iresearch}', JSON.stringify(retrievedDocs));
+                console.log('Modified system prompt: ', body.messages[0].content);
+            }
+        }
+        catch (error) {
+            console.log('Error in tavily: ', error);
+        }
+        if (agentData === null || agentData === void 0 ? void 0 : agentData.getzep) {
+            console.log('getting embedding data from Zep');
+            try {
+                const collection = yield zepClient.document.getCollection(agentData.collectionname ? agentData.collectionname : '');
+                const mmrSearchQuery = {
+                    text: body.messages[body.messages.length - 1].content,
+                    searchType: "mmr",
+                    mmrLambda: 0.5,
+                };
+                const mmrSearchResults = yield collection.search(mmrSearchQuery, 3);
+                // console.log('mmr Search: ',mmrSearchResults );
+                const filteredResults = mmrSearchResults.map((item) => ({
+                    content: item.content,
+                    metadata: item.metadata
+                }));
+                console.log('mmr filtered Search: ', filteredResults);
+                body.messages[0].content = body.messages[0].content + '. Only Use this information and cite the metadata source for reference: ' + JSON.stringify(filteredResults) + ' ';
+            }
+            catch (error) {
+                console.log(error);
+            }
+        }
+        if ((agentData === null || agentData === void 0 ? void 0 : agentData.req_type) !== null && (agentData === null || agentData === void 0 ? void 0 : agentData.req_type) === 'premai') {
+            const toolsToUse = {};
+            yield (0, generateText_1.genTextUsingPrem)(agentData, body.messages, toolsToUse, (result) => {
+                for (const part of result) {
+                    sendStream(JSON.stringify(createChatCompletion(part, null, null)), res);
+                    summaryTokens = summaryTokens + part;
+                }
+            });
+            yield sleep(1000);
+            endStream(res);
+            updateLogs(body, summaryTokens, userID);
+            return;
+        }
+        if ((agentData === null || agentData === void 0 ? void 0 : agentData.req_type) !== null && (agentData === null || agentData === void 0 ? void 0 : agentData.req_type) === 'replicate' && agentData.llmrouter === 'videogen') {
+            const inputImage = (0, helpers_1.extractUrl)(prompt);
+            if (inputImage.startsWith('https://')) {
+                const response = yield (0, videoGen_1.videoGen)(agentData.modelid, inputImage, agentData.lora);
+                if (response) {
+                    console.log(response);
+                    if (body === null || body === void 0 ? void 0 : body.stream) {
+                        sendStream(JSON.stringify(createChatCompletion(response, null, null)), res);
+                        yield sleep(1000);
+                        endStream(res);
+                    }
+                    else {
+                        res.send(response);
+                    }
+                    updateLogs(body, response, userID);
+                    return;
+                }
+                else {
+                    if (body === null || body === void 0 ? void 0 : body.stream) {
+                        sendStream(JSON.stringify(createChatCompletion('Error: Input image is needed. Please attach an image', null, null)), res);
+                        yield sleep(1000);
+                        endStream(res);
+                    }
+                    else {
+                        res.send(response);
+                    }
+                    updateLogs(body, response, userID);
+                    return;
+                }
+            }
+        }
+        if ((agentData === null || agentData === void 0 ? void 0 : agentData.req_type) !== null && (agentData === null || agentData === void 0 ? void 0 : agentData.req_type) === 'replicate' && agentData.llmrouter === 'photomaker') {
+            const inputImage = (0, helpers_1.extractUrl)(prompt);
+            if (inputImage.startsWith('https://')) {
+                const response = yield (0, photoMaker_1.photoMaker)(agentData.modelid, inputImage, prompt);
+                if (response) {
+                    console.log(response);
+                    if (body === null || body === void 0 ? void 0 : body.stream) {
+                        sendStream(JSON.stringify(createChatCompletion(response, null, null)), res);
+                        yield sleep(1000);
+                        endStream(res);
+                    }
+                    else {
+                        res.send(response);
+                    }
+                    updateLogs(body, response, userID);
+                    return;
+                }
+                else {
+                    if (body === null || body === void 0 ? void 0 : body.stream) {
+                        sendStream(JSON.stringify(createChatCompletion('Error: Input image is needed. Please attach an image', null, null)), res);
+                        yield sleep(1000);
+                        endStream(res);
+                    }
+                    else {
+                        res.send(response);
+                    }
+                    updateLogs(body, response, userID);
+                    return;
+                }
+            }
+        }
+        if ((agentData === null || agentData === void 0 ? void 0 : agentData.req_type) !== null && (agentData === null || agentData === void 0 ? void 0 : agentData.req_type) === 'replicate' && agentData.llmrouter === 'upscalegen') {
+            const inputImage = (0, helpers_1.extractUrl)(prompt);
+            if (inputImage.startsWith('https://')) {
+                const response = yield (0, upscaleGen_1.upscaleGen)(agentData.modelid, agentData.image_height, inputImage, agentData.lora);
+                if (response) {
+                    console.log(response);
+                    if (body === null || body === void 0 ? void 0 : body.stream) {
+                        sendStream(JSON.stringify(createChatCompletion(response, null, null)), res);
+                        yield sleep(1000);
+                        endStream(res);
+                    }
+                    else {
+                        res.send(response);
+                    }
+                    updateLogs(body, response, userID);
+                    return;
+                }
+                else {
+                    if (body === null || body === void 0 ? void 0 : body.stream) {
+                        sendStream(JSON.stringify(createChatCompletion('Error: Input image is needed. Please attach an image', null, null)), res);
+                        yield sleep(1000);
+                        endStream(res);
+                    }
+                    else {
+                        res.send(response);
+                    }
+                    updateLogs(body, response, userID);
+                    return;
+                }
+            }
+        }
+        if ((agentData === null || agentData === void 0 ? void 0 : agentData.req_type) !== null && (agentData === null || agentData === void 0 ? void 0 : agentData.req_type) === 'perplexity') {
+            let response = null;
+            try {
+                const result = yield (0, createText_1.textResponse)(agentData, body.messages);
+                console.log(result);
+                response = result.data.choices[0].message.content;
+                if (response) {
+                    console.log(response);
+                    if (body === null || body === void 0 ? void 0 : body.stream) {
+                        sendStream(JSON.stringify(createChatCompletion(response, null, null)), res);
+                        yield sleep(1000);
+                        endStream(res);
+                    }
+                    else {
+                        res.send(response);
+                    }
+                    // save data for logs.
+                    updateLogs(body, response, userID);
+                    return;
+                }
+            }
+            catch (error) {
+                console.log('perplexity text gen issue', error);
+            }
+        }
         if ((agentData === null || agentData === void 0 ? void 0 : agentData.req_type) !== null && (agentData === null || agentData === void 0 ? void 0 : agentData.req_type) === 'openai') {
             let response = null;
             try {
@@ -138,8 +333,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                 else {
                     res.send(response);
                 }
-                // save data for logs.
-                yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, response, req.body, req.body]);
+                updateLogs(body, response, userID);
                 return;
             }
         }
@@ -171,8 +365,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                 else {
                     res.send(response.choices[0].message.content.trim());
                 }
-                // save data for logs.
-                yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, response.choices[0].message.content.trim(), req.body, req.body]);
+                updateLogs(body, response.choices[0].message.content.trim(), userID);
                 return;
             }
         }
@@ -191,7 +384,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                     res.send(response.image_url);
                 }
                 // save data for logs.
-                yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, summaryTokens, req.body, req.body]);
+                updateLogs(body, response.image_url, userID);
                 return;
             }
             if (agentData === null || agentData === void 0 ? void 0 : agentData.genanimation) {
@@ -210,7 +403,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                         res.send(result.output.image_urls[0]);
                     }
                     // save data for logs.
-                    yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, summaryTokens, req.body, req.body]);
+                    updateLogs(body, result.output.image_urls[0], userID);
                     return;
                 }
             }
@@ -229,7 +422,7 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                             res.send(response.output[0]);
                         }
                         // save data for logs.
-                        yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, response.output[0], req.body, req.body]);
+                        updateLogs(body, response.output[0], userID);
                         yield (0, createEvent_1.createNIP94Event)(response.output[0], null, body.messages[body.messages.length - 1].content);
                     }
                 }
@@ -260,6 +453,8 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
                 else {
                     res.send(currentImageString);
                 }
+                // save data for logs.
+                updateLogs(body, currentImageString, userID);
                 yield (0, createEvent_1.createNIP94Event)(currentImageString, null, body.messages[body.messages.length - 1].content);
             }
             catch (error) {
@@ -267,8 +462,6 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
             }
             if (body === null || body === void 0 ? void 0 : body.stream)
                 endStream(res);
-            // save data for logs.
-            yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, summaryTokens, req.body, req.body]);
             return;
         }
     }
@@ -307,27 +500,8 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         if (body === null || body === void 0 ? void 0 : body.stream)
             endStream(res);
-        // save data for logs.
-        yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, summaryTokens, req.body, req.body]);
+        updateLogs(body, summaryTokens, userID);
         return;
-    }
-    if (agentData.getzep) {
-        console.log('getting embedding data from Zep');
-        try {
-            const client = yield zep_js_1.ZepClient.init(process.env.ZEP_API_URL);
-            const collection = yield client.document.getCollection(agentData.collectionname ? agentData.collectionname : '');
-            let searchResult = '';
-            const searchResults = yield collection.search({
-                text: body.messages[body.messages.length - 1].content,
-            }, 3);
-            console.log(`Found ${searchResults.length} documents matching query '${body.messages[body.messages.length - 1].content}'`);
-            // printResults(searchResults);
-            searchResult = (0, vivekdoc_1.getResults)(searchResults);
-            body.messages[0].content = body.messages[0].content + '. Use this information I found on the web: ' + searchResult + ' ';
-        }
-        catch (error) {
-            console.log(error);
-        }
     }
     const messages = getMessages(body.messages);
     console.log('Input prompt: ' + JSON.stringify(messages));
@@ -390,14 +564,47 @@ l402.post('/completions', (req, res) => __awaiter(void 0, void 0, void 0, functi
             });
             console.log('stream', stream);
             res.send(stream.choices[0].message.content);
+            summaryTokens = stream.choices[0].message.content;
         }
         catch (error) {
             console.log(error);
             res.send('Error in getting response. Please try again later. ');
         }
     }
-    yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, summaryTokens, req.body, req.body]);
+    updateLogs(body, summaryTokens, userID);
 }));
+function updateLogs(body, summaryTokens, userID) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // save data for logs.
+        const userMessage = body.messages[body.messages.length - 1].content;
+        yield (0, data_1.insertData)("INSERT INTO messages (message_id, conversation_id, fingerprint_id, llmrouter, agent_type, user_message, response, chat_history, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [body.messageId, body.conversationId, body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)(), body.llm_router, body.system_purpose, userMessage.length > 2000 ? userMessage.substring(0, 1998) : userMessage, summaryTokens, body, body]);
+        const sessionId = body.app_fingerprint ? body.app_fingerprint : (0, uuid_1.v4)();
+        const sessionData = {
+            session_id: sessionId,
+            // user_id: userID.user_id, // Optionally associate this session with a user
+            metadata: { agent: body.system_purpose,
+                createdDate: Date.now(),
+                userMessage: body.messages[body.messages.length - 1].content,
+                llmResponse: summaryTokens },
+        };
+        const session = new zep_js_1.Session(sessionData);
+        try {
+            yield zepClient.memory.addSession(session);
+        }
+        catch (error) {
+            yield zepClient.memory.updateSession(session);
+        }
+        body.messages.push({
+            role: 'assistant',
+            content: summaryTokens,
+            metadata: { agent: body.system_purpose,
+                createdDate: Date.now() }
+        });
+        const messages = body.messages.map(({ role, content, metadata }) => new zep_js_1.Message({ role, content, metadata }));
+        const memory = new zep_js_1.Memory({ messages });
+        yield zepClient.memory.addMemory(sessionId, memory);
+    });
+}
 exports.default = l402;
 function sendStream(data, res) {
     return __awaiter(this, void 0, void 0, function* () {

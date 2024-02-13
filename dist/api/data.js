@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.insertData = exports.getAnimateData = exports.getAgentById = void 0;
+exports.updateTable = exports.insertData = exports.getAnimateData = exports.getAgentById = void 0;
 const express_1 = require("express");
 const data_1 = require("../modules/data");
 const pg_1 = require("pg");
@@ -42,6 +42,8 @@ const uuid_1 = require("uuid");
 const fs_1 = require("fs");
 const promises_1 = require("timers/promises");
 const txt2img_1 = require("../modules/randomseed/txt2img");
+const createEmbed_1 = require("../modules/getZep/createEmbed");
+const createuser_1 = require("../modules/nostr/createuser");
 const data = (0, express_1.Router)();
 dotenv.config();
 const pubkey = (nip05) => __awaiter(void 0, void 0, void 0, function* () {
@@ -80,11 +82,17 @@ pgclient.connect((err) => {
 data.post('/upload', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const id = (0, uuid_1.v4)();
-        const imageString = req.body.input;
-        (0, fs_1.writeFileSync)(process.env.UPLOAD_PATH + id + `.` + req.body.type, imageString.split(",")[1], 'base64');
-        const response = yield (0, helpers_1.getImageUrl)(id, req.body.type);
-        console.log(response);
-        res.send(({ 'url': response }));
+        const fileString = req.body.input;
+        (0, fs_1.writeFileSync)(process.env.UPLOAD_PATH + id + `.` + req.body.type, fileString.split(",")[1], 'base64');
+        if (req.body.type === 'jpeg' || req.body.type === 'png' || req.body.type === 'jpg') {
+            const response = yield (0, helpers_1.getImageUrl)(id, req.body.type);
+            console.log(response);
+            res.send(({ 'url': response }));
+        }
+        else {
+            console.log(process.env.UPLOAD_PATH + id + `.` + req.body.type);
+            res.send(({ 'url': id + `.` + req.body.type }));
+        }
     }
     catch (error) {
         res.send({ 'error': true });
@@ -96,7 +104,7 @@ data.post('/agents', (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.send({ SystemPurposes: data_1.SystemPurposes });
     }
     else {
-        const result = yield pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, nip05, category, restricted, CASE WHEN createtime < NOW() - INTERVAL '4 day' THEN 'false' ELSE 'true' END AS newagent FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '" + req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '" + req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
+        const result = yield pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, nip05, category, restricted, CASE WHEN createtime < NOW() - INTERVAL '4 day' THEN 'false' ELSE 'true' END AS newagent, datasource, req_type, iresearch FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '" + req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '" + req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
         // const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, category  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
         const agentData = [];
         const dataOutput = {};
@@ -126,7 +134,10 @@ data.post('/agents', (req, res) => __awaiter(void 0, void 0, void 0, function* (
                         newAgent: item.newagent,
                         nip05: item.nip05,
                         category: item.category,
-                        restricted: item.restricted
+                        restricted: item.restricted,
+                        iresearch: item.iresearch,
+                        reqType: item.req_type,
+                        datasource: item.datasource
                     },
                 });
             }));
@@ -167,7 +178,7 @@ data.post('/agents/all', (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.send({ SystemPurposes: data_1.SystemPurposes });
     }
     else {
-        const result = yield pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05 FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '" + req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '" + req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
+        const result = yield pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05, datasource, req_type, iresearch FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '" + req.body.fingerPrint + "') ORDER BY CASE WHEN createdby = '" + req.body.fingerPrint + "' THEN 0 ELSE 1 END, CASE WHEN createtime >= (current_timestamp - interval '2 day') THEN 0 ELSE 1 END, chatruns DESC; ");
         // const result = await pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns  FROM aiagents WHERE (status = 'active' AND private = false) OR (createdby = '"+ req.body.fingerPrint + "') ORDER BY chatruns DESC;" );
         const agentData = [];
         const dataOutput = {};
@@ -196,7 +207,10 @@ data.post('/agents/all', (req, res) => __awaiter(void 0, void 0, void 0, functio
                         newAgent: item.newagent,
                         key_iv: item.key_iv,
                         key_content: item.key_content,
-                        nip05: item.nip05
+                        nip05: item.nip05,
+                        iresearch: item.iresearch,
+                        reqType: item.req_type,
+                        datasource: item.datasource
                     },
                 });
             });
@@ -217,7 +231,7 @@ data.post('/agent', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.send({ error: 'ai agent not found' });
     }
     else {
-        const result = yield pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, category, commissionaddress, modelid, lora, image_height, image_width, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05 FROM aiagents WHERE  id = '" + req.body.id + "'");
+        const result = yield pgclient.query("SELECT id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, chatruns, category, commissionaddress, modelid, lora, image_height, image_width, CASE WHEN createtime < NOW() - INTERVAL '2 day' THEN 'false' ELSE 'true' END AS newagent, key_iv, key_content, nip05, datasource, req_type, iresearch FROM aiagents WHERE  id = '" + req.body.id + "'");
         const agentData = [];
         const dataOutput = {};
         if (result.rows) {
@@ -251,7 +265,10 @@ data.post('/agent', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                         modelid: item.modelid,
                         lora: item.lora,
                         image_height: item.image_height,
-                        image_width: item.image_width
+                        image_width: item.image_width,
+                        iresearch: item.iresearch,
+                        reqType: item.req_type,
+                        datasource: item.datasource
                     },
                 });
             });
@@ -300,13 +317,20 @@ data.post('/agent/create', (req, res) => __awaiter(void 0, void 0, void 0, funct
             agent.lora = '';
         if (!agent.reqType)
             agent.reqType = '';
-        const result = yield insertData("INSERT INTO aiagents (id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, commissionaddress, category, genimage, modelid, lora, image_height, image_width, req_type ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)", [key, agent.title, agent.description, agent.systemMessage, agent.symbol, agent.examples, agent.placeHolder, agent.chatLLM, agent.llmRouter, agent.convoCount, agent.maxToken, agent.temperature, agent.satsPay, agent.paid, agent.private, agent.status, agent.createdBy, agent.updatedBy, agent.commissionAddress, agent.category, agent.genimage, agent.modelid, agent.lora, agent.image_height, agent.image_wdith, agent.reqType]);
+        if (!agent.iresearch)
+            agent.iresearch = false;
+        if (!agent.datasource)
+            agent.datasource = '{}';
+        const nostrUser = yield (0, createuser_1.createNostrUser)(agent.title);
+        const result = yield insertData("INSERT INTO aiagents (id, title, description, systemmessage, symbol, examples, placeholder, chatllm, llmrouter, convocount, maxtoken, temperature, satspay, paid, private, status, createdby, updatedby, commissionaddress, category, genimage, modelid, lora, image_height, image_width, req_type, iresearch, datasource, nip05,key_iv,key_content  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)", [key, agent.title, agent.description, agent.systemMessage, agent.symbol, agent.examples, agent.placeHolder, agent.chatLLM, agent.llmRouter, agent.convoCount, agent.maxToken, agent.temperature, agent.satsPay, agent.paid, agent.private, agent.status, agent.createdBy, agent.updatedBy, agent.commissionAddress, agent.category, agent.genimage, agent.modelid, agent.lora, agent.image_height, agent.image_wdith, agent.reqType, agent.iresearch, agent.datasource, nostrUser.nip05, nostrUser.key_iv, nostrUser.key_content]);
         if (!result)
             return (0, helpers_1.errorBadAuth)(res);
         console.log(Object.keys(agentData).length, count);
         if (Object.keys(agentData).length === count)
             res.send({ result: 'Update success' });
         count++;
+        if (agent.datasource)
+            (0, createEmbed_1.createZepEmbeddings)(key);
     }));
 }));
 function getAgentById(id) {
@@ -343,6 +367,7 @@ data.post('/agent/update', (req, res) => {
             res.send(result);
         }
     });
+    (0, createEmbed_1.createZepEmbeddings)(req.body.id);
 });
 data.post('/genimage', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log(req.body);
@@ -380,4 +405,24 @@ function insertData(insertQuery, insertValues) {
     });
 }
 exports.insertData = insertData;
+function updateTable(body) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const columns = Object.keys(body);
+        const values = Object.values(body);
+        const updateQuery = `UPDATE aiagents SET ${columns.map((column, index) => `${column} = $${index + 1}`).join(', ')} WHERE id = '` + body.id + `'`;
+        console.log(updateQuery, values);
+        pgclient.query(updateQuery, values, (err, result) => {
+            if (err) {
+                console.error(err);
+                return false;
+            }
+            else {
+                console.log(result);
+                return true;
+            }
+        });
+        return false;
+    });
+}
+exports.updateTable = updateTable;
 //# sourceMappingURL=data.js.map

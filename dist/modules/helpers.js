@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorServer = exports.errorAdultcontent = exports.errorUnauthorized = exports.errorBadArguments = exports.errorInvoicePaid = exports.extractUrl = exports.extractUrls = exports.splitStringByUrl = exports.errorBadAuth = exports.removeKeyword = exports.getResults = exports.saveBase64AsImageFile = exports.getBase64ImageFromURL = exports.closestMultipleOf256 = exports.findBestMatch = exports.getImageUrlFromFile = exports.deleteImageUrl = exports.getImageUrl = exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom5DigitNumber = exports.generateRandom9DigitNumber = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.ModelIds = exports.relayIds = void 0;
+exports.writeToFile = exports.readFromFile = exports.getCurrentUrl = exports.getGifUrl = exports.errorServer = exports.errorAdultcontent = exports.errorUnauthorized = exports.errorBadArguments = exports.errorInvoicePaid = exports.extractUrl = exports.extractUrls = exports.splitStringByUrl = exports.errorBadAuth = exports.removeKeyword = exports.getResults = exports.saveBase64AsImageFile = exports.getBase64ImageFromURL = exports.closestMultipleOf256 = exports.findBestMatch = exports.getImageUrlFromFile = exports.deleteImageUrl = exports.getImageUrl = exports.publishRelay = exports.publishRelays = exports.readRandomRow = exports.generateRandom5DigitNumber = exports.generateRandom9DigitNumber = exports.generateRandom10DigitNumber = exports.requestApiAccess = exports.sendHeaders = exports.vetifyLsatToken = exports.getLsatToChallenge = exports.encrypt = exports.ModelIds = exports.relayIds = void 0;
 const alby_tools_1 = require("alby-tools");
 const l402js_1 = require("./l402js");
 const Macaroon = __importStar(require("macaroon"));
@@ -47,6 +47,8 @@ const form_data_1 = __importDefault(require("form-data"));
 const axios_1 = __importDefault(require("axios"));
 const sharp_1 = __importDefault(require("sharp"));
 const url = __importStar(require("url"));
+const child_process_1 = require("child_process");
+const crypto = __importStar(require("crypto"));
 exports.relayIds = [
     'wss://relay.current.fyi',
     'wss://nostr1.current.fyi',
@@ -102,6 +104,18 @@ exports.ModelIds = [
     "stable-diffusion-v2-1",
     "stable-diffusion-v1-5"
 ];
+function encrypt(text, key) {
+    const algorithm = 'aes-256-ctr';
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv(algorithm, Buffer.from(key, 'hex'), iv);
+    const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+    return {
+        iv: iv.toString('hex'),
+        content: encrypted.toString('hex'),
+        key
+    };
+}
+exports.encrypt = encrypt;
 function getLsatToChallenge(requestBody, amtinsats) {
     return __awaiter(this, void 0, void 0, function* () {
         const ln = new alby_tools_1.LightningAddress(process.env.LIGHTNING_ADDRESS);
@@ -515,4 +529,146 @@ function errorServer(res) {
     });
 }
 exports.errorServer = errorServer;
+function getGifUrl(url, filePath, id, type) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let fileName = id + '.mp4';
+        const localFile = process.env.UPLOAD_PATH ? process.env.UPLOAD_PATH + fileName : '';
+        if (url !== '')
+            yield (downloadFile(url, localFile));
+        fileName = id + '.gif';
+        let cmd = 'ffmpeg -i input -q:a 0 output';
+        cmd = cmd.replace(new RegExp('input', 'g'), localFile).replace('output', process.env.UPLOAD_PATH + fileName);
+        console.log(cmd);
+        yield executeCommand(cmd); // Replace 'ls' with your command
+        console.log('s3 name: ', filePath + fileName);
+        const form = new form_data_1.default();
+        form.append('asset', (0, fs_1.createReadStream)(process.env.UPLOAD_PATH + fileName));
+        form.append("name", filePath + fileName);
+        form.append("type", type);
+        const config = {
+            method: 'post',
+            url: process.env.UPLOAD_URL,
+            headers: Object.assign({ 'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH, 'Content-Type': 'multipart/form-data' }, form.getHeaders()),
+            data: form
+        };
+        const resp = yield axios_1.default.request(config);
+        console.log('Current file: ', resp.data.data);
+        (0, fs_1.unlink)(localFile, (err) => {
+            if (err) {
+                console.log(err);
+            }
+            console.log('tmp file deleted');
+        });
+        (0, fs_1.unlink)(process.env.UPLOAD_PATH + fileName, (err) => {
+            if (err) {
+                console.log(err);
+            }
+            console.log('tmp file deleted');
+        });
+        return resp.data.data;
+    });
+}
+exports.getGifUrl = getGifUrl;
+function getCurrentUrl(url, filePath, id, type) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const fileName = id + '.' + type;
+        const localFile = process.env.UPLOAD_PATH ? process.env.UPLOAD_PATH + fileName : '';
+        if (url !== '')
+            yield (downloadFile(url, localFile));
+        console.log('s3 name: ', filePath + fileName);
+        const form = new form_data_1.default();
+        form.append('asset', (0, fs_1.createReadStream)(localFile));
+        form.append("name", filePath + fileName);
+        form.append("type", type);
+        const config = {
+            method: 'post',
+            url: process.env.UPLOAD_URL,
+            headers: Object.assign({ 'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH, 'Content-Type': 'multipart/form-data' }, form.getHeaders()),
+            data: form
+        };
+        const resp = yield axios_1.default.request(config);
+        console.log('Current file: ', resp.data.data);
+        (0, fs_1.unlink)(localFile, (err) => {
+            if (err) {
+                console.log(err);
+            }
+            console.log('tmp file deleted');
+        });
+        return resp.data.data;
+    });
+}
+exports.getCurrentUrl = getCurrentUrl;
+function downloadFile(url, localFile) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const response = yield (0, axios_1.default)({
+            method: 'GET',
+            url,
+            responseType: 'stream'
+        });
+        return new Promise((resolve, reject) => {
+            const writer = (0, fs_1.createWriteStream)(localFile);
+            response.data.pipe(writer);
+            let error = null;
+            writer.on('error', err => {
+                error = err;
+                writer.close();
+                reject(err);
+            });
+            writer.on('close', () => {
+                if (!error) {
+                    console.log(localFile);
+                    resolve();
+                }
+            });
+        });
+    });
+}
+function readFromFile(filename) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            (0, fs_1.readFile)(filename, 'utf8', (err, data) => {
+                if (err) {
+                    reject(err);
+                }
+                else {
+                    resolve(data);
+                }
+            });
+        });
+    });
+}
+exports.readFromFile = readFromFile;
+// Function to write text to a file
+function writeToFile(filename, data) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            (0, fs_1.writeFile)(filename, data, (err) => {
+                if (err) {
+                    reject(err);
+                }
+                else {
+                    resolve();
+                }
+            });
+        });
+    });
+}
+exports.writeToFile = writeToFile;
+function executeCommand(command) {
+    try {
+        return new Promise((resolve, reject) => {
+            (0, child_process_1.exec)(command, (error, stdout, stderr) => {
+                if (error) {
+                    reject(`Error: ${error.message}`);
+                    return;
+                }
+                resolve(stdout);
+            });
+        });
+    }
+    catch (error) {
+        console.log('Error in cmd: ', error);
+        return null;
+    }
+}
 //# sourceMappingURL=helpers.js.map

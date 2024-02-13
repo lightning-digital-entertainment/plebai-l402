@@ -5,12 +5,14 @@ import * as Macaroon from 'macaroon'
 import { sha256 } from "js-sha256";
 import * as fs from 'fs';
 import { type Event as NostrEvent, relayInit } from 'nostr-tools';
-import { createReadStream, writeFileSync, unlink } from 'fs'
+import { createReadStream, createWriteStream, readFile, unlink, writeFile } from "fs";
 import FormData from 'form-data';
 import axios from "axios";
 import sharp from "sharp";
 import { IDocument } from "@getzep/zep-js";
 import * as url from 'url';
+import {exec } from 'child_process';
+import * as crypto from 'crypto';
 
 export const relayIds = [
   'wss://relay.current.fyi',
@@ -69,6 +71,27 @@ export const ModelIds = [
   "stable-diffusion-v2-1",
   "stable-diffusion-v1-5"
 ]
+
+export interface EncryptedData {
+  iv: string;
+  content: string;
+  key: string;
+}
+
+export function encrypt(text: string, key:string): EncryptedData {
+  const algorithm = 'aes-256-ctr';
+  const iv = crypto.randomBytes(16);
+
+  const cipher = crypto.createCipheriv(algorithm, Buffer.from(key, 'hex'), iv);
+
+  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+
+  return {
+    iv: iv.toString('hex'),
+    content: encrypted.toString('hex'),
+    key
+  };
+}
 
 
 export async function getLsatToChallenge(requestBody: string, amtinsats: number): Promise<Lsat> {
@@ -576,5 +599,178 @@ export function errorServer(res:any) {
     code: 3,
     message: 'internal Server error',
   });
+}
+
+export async function getGifUrl(url:string, filePath: string,id:string, type:string): Promise<string> {
+
+
+  let fileName = id + '.mp4';
+
+  const localFile = process.env.UPLOAD_PATH?process.env.UPLOAD_PATH + fileName:'';
+
+  if (url !== '') await (downloadFile(url, localFile));
+
+  fileName = id + '.gif';
+
+
+  let cmd = 'ffmpeg -i input -q:a 0 output';
+  cmd = cmd.replace(new RegExp('input', 'g'), localFile).replace('output', process.env.UPLOAD_PATH +fileName);
+  console.log(cmd);
+  await executeCommand(cmd); // Replace 'ls' with your command
+
+  console.log('s3 name: ', filePath + fileName);
+
+  const form = new FormData();
+  form.append('asset', createReadStream(process.env.UPLOAD_PATH +fileName));
+  form.append("name", filePath + fileName);
+  form.append("type", type);
+
+  const config = {
+      method: 'post',
+      url: process.env.UPLOAD_URL,
+      headers: {
+        'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH,
+        'Content-Type': 'multipart/form-data',
+        ...form.getHeaders()
+      },
+      data: form
+  };
+
+  const resp = await axios.request(config);
+  console.log('Current file: ', resp.data.data);
+
+  unlink(localFile, (err) => {
+    if (err) {
+        console.log(err);
+    }
+  console.log('tmp file deleted');
+  })
+
+  unlink(process.env.UPLOAD_PATH +fileName, (err) => {
+    if (err) {
+        console.log(err);
+    }
+  console.log('tmp file deleted');
+  })
+
+
+
+  return resp.data.data;
+
+}
+
+export async function getCurrentUrl(url:string, filePath: string,id:string, type:string): Promise<string> {
+
+
+  const fileName = id + '.' + type;
+
+  const localFile = process.env.UPLOAD_PATH?process.env.UPLOAD_PATH + fileName:'';
+
+  if (url !== '') await (downloadFile(url, localFile));
+
+
+  console.log('s3 name: ', filePath + fileName);
+
+  const form = new FormData();
+  form.append('asset', createReadStream(localFile));
+  form.append("name", filePath + fileName);
+  form.append("type", type);
+
+  const config = {
+      method: 'post',
+      url: process.env.UPLOAD_URL,
+      headers: {
+        'Authorization': 'Bearer ' + process.env.UPLOAD_AUTH,
+        'Content-Type': 'multipart/form-data',
+        ...form.getHeaders()
+      },
+      data: form
+  };
+
+  const resp = await axios.request(config);
+  console.log('Current file: ', resp.data.data);
+
+  unlink(localFile, (err) => {
+    if (err) {
+        console.log(err);
+    }
+  console.log('tmp file deleted');
+  })
+
+  return resp.data.data;
+
+}
+
+async function downloadFile(url: string, localFile:string): Promise<void> {
+  const response = await axios({
+      method: 'GET',
+      url,
+      responseType: 'stream'
+  });
+
+
+  return new Promise((resolve, reject) => {
+      const writer = createWriteStream(localFile);
+      response.data.pipe(writer);
+      let error: any = null;
+      writer.on('error', err => {
+          error = err;
+          writer.close();
+          reject(err);
+      });
+      writer.on('close', () => {
+          if (!error) {
+              console.log(localFile);
+              resolve();
+          }
+      });
+  });
+}
+
+export async function readFromFile(filename: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+     readFile(filename, 'utf8', (err, data) => {
+       if (err) {
+         reject(err);
+       } else {
+         resolve(data);
+       }
+     });
+  });
+ }
+
+ // Function to write text to a file
+export async function writeToFile(filename: string, data: string): Promise<void> {
+ return new Promise((resolve, reject) => {
+    writeFile(filename, data, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+ });
+}
+
+function executeCommand(command: string): Promise<string> {
+
+  try {
+
+        return new Promise((resolve, reject) => {
+          exec(command, (error, stdout, stderr) => {
+              if (error) {
+                  reject(`Error: ${error.message}`);
+                  return;
+              }
+              resolve(stdout);
+          });
+      });
+
+  } catch (error) {
+    console.log('Error in cmd: ', error);
+    return null;
+
+  }
+
 }
 

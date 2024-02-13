@@ -197,9 +197,16 @@ l402.post('/medical2023', async (req: Request, res: Response) => {
       }),
     ];
 
-
-      const client = await ZepClient.init(process.env.ZEP_API_URL);
-      const collection = await client.document.getCollection(process.env.COLLECTION_NAME);
+      let zepClient: any;
+      zepClient = await ZepClient.init(process.env.ZEP_API_URL, process.env.ZEP_API_KEY)
+                            .then(resolvedClient => {
+                              zepClient = resolvedClient
+                                console.log('Connected to Zep...')
+                            })
+                            .catch(error => {
+                                console.log('Error connecting to Zep')
+                            });
+      const collection = await zepClient.document.getCollection(process.env.COLLECTION_NAME);
 
       console.log(req.body.content)
 

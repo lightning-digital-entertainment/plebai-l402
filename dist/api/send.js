@@ -115,8 +115,16 @@ l402.post('/vivek2024', (req, res) => __awaiter(void 0, void 0, void 0, function
             gl: "us",
         }),
     ];
-    const client = yield zep_js_1.ZepClient.init(process.env.ZEP_API_URL);
-    const collection = yield client.document.getCollection(process.env.COLLECTION_NAME);
+    let zepClient;
+    zepClient = yield zep_js_1.ZepClient.init(process.env.ZEP_API_URL, process.env.ZEP_API_KEY)
+        .then(resolvedClient => {
+        zepClient = resolvedClient;
+        console.log('Connected to Zep...');
+    })
+        .catch(error => {
+        console.log('Error connecting to Zep');
+    });
+    const collection = yield zepClient.document.getCollection(process.env.COLLECTION_NAME);
     console.log(req.body.content);
     let searchResult = '';
     try {

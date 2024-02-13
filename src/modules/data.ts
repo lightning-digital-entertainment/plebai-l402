@@ -32,6 +32,8 @@ export type SystemPurposeData = {
   image_height: number,
   lora: string
   reqType:string
+  iresearch:boolean,
+  datasource:string
 }
 
 export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
@@ -62,7 +64,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
   },
   GenImage: {
     title: 'Gen Image AI ',
@@ -90,7 +94,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
   },
 
   SatsForDev: {
@@ -119,7 +125,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
   },
 
   DocGPT: {
@@ -148,7 +156,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
 
   },
 
@@ -181,7 +191,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
   },
   PromptGenie: {
     title: 'Pickup Artist',
@@ -209,7 +221,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
   },
 
 
@@ -242,7 +256,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
 
   },
 
@@ -273,7 +289,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
 
   },
 
@@ -303,7 +321,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
 
   },
 
@@ -333,7 +353,9 @@ export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
     image_wdith: 512,
     image_height: 512,
     lora: '',
-    reqType:''
+    reqType:'',
+    iresearch:false,
+    datasource:''
 
   },
 

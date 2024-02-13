@@ -1,15 +1,12 @@
-
-import { GitbookLoader } from "langchain/document_loaders/web/gitbook";
+import { JSONLoader } from "langchain/document_loaders/fs/json";
 import { Document, IDocument,ZepClient } from "@getzep/zep-js";
+import * as dotenv from 'dotenv';
 
+dotenv.config();
+const zepApiUrl =  process.env.ZEP_API_URL;
+const collectionName = '41700794059';
 
-
-const zepApiUrl =  'http://107.21.5.87:7999'; // process.env.ZEP_API_URL;
-const collectionName = '41700757577';
-
-const loader = new GitbookLoader('https://docs.lightning.engineering', {
-  shouldLoadAllPaths: true,
-});
+const loader = new JSONLoader('/Users/arunnedunchezian/Downloads/relai.json');
 
 
 
@@ -25,8 +22,8 @@ async function createCollection() {
     const collection = await client.document.addCollection({
        name: collectionName,
        embeddingDimensions: 1536, // this must match the embedding dimensions of your embedding model
-       description: "gitbook from https://docs.lightning.engineering ", // optional
-       metadata: { 'title': "Builder's guide" }, // optional
+       description: "Strike App resources ", // optional
+       metadata: { 'title': "Strike App FQAs" }, // optional
        isAutoEmbedded: true, // optional (default: true) - whether Zep should  automatically embed documents
     });
 
@@ -46,7 +43,7 @@ async function checkGitbook() {
 
 async function uploadDocuments() {
 
-    const client = await ZepClient.init(zepApiUrl);
+    const client = await ZepClient.init(zepApiUrl, process.env.ZEP_API_KEY);
     const collection = await client.document.getCollection(collectionName);
 
     const docs = await loader.load();
@@ -90,11 +87,11 @@ async function uploadDocuments() {
 
 };
 
-createCollection();
+// createCollection();
 // uploadDocuments();
 // checkStatus();
 // checkGitbook();
-// queryDocs();
+queryDocs();
 
 async function checkStatus() {
 
@@ -142,12 +139,12 @@ async function checkEmbeddingStatus(
 
  async function queryDocs() {
 
-    const client = await ZepClient.init(zepApiUrl);
+    const client = await ZepClient.init(zepApiUrl, process.env.ZEP_API_KEY);
     const collection = await client.document.getCollection(collectionName);
 
 
 
-    const query = "How do I install the Alby Browser Extension? ";
+    const query = "How do I use replai app? ";
     const searchResults = await collection.search(
        {
           text: query,
@@ -198,6 +195,3 @@ function splitStringIntoChunks(str: string, chunkSize: number): string[] {
 
    return chunks;
  }
-
-
-

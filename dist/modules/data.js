@@ -29,7 +29,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     GenImage: {
         title: 'Gen Image AI ',
@@ -57,7 +59,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     SatsForDev: {
         title: 'CodeGPT',
@@ -85,7 +89,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     DocGPT: {
         title: 'DocGPT',
@@ -113,7 +119,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     Vivek2024: {
         title: 'Ask Vivek 2024 ',
@@ -141,7 +149,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     PromptGenie: {
         title: 'Pickup Artist',
@@ -169,7 +179,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     PodChat: {
         title: 'AngryGPT',
@@ -197,7 +209,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     Editor: {
         title: 'English Editor',
@@ -225,7 +239,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     Emoji: {
         title: 'EmojiGPT',
@@ -253,7 +269,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
     RoastMaster: {
         title: 'Roast Master',
@@ -281,7 +299,9 @@ exports.SystemPurposes = {
         image_wdith: 512,
         image_height: 512,
         lora: '',
-        reqType: ''
+        reqType: '',
+        iresearch: false,
+        datasource: ''
     },
 };
 //# sourceMappingURL=data.js.map
