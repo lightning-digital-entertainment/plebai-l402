@@ -13,6 +13,7 @@ export async function genTextUsingPrem (agentData:any, messages:any[], toolsToUs
         project_id:projectId,
         messages,
         model:agentData.modelid,
+        temperature:agentData.temperature,
         stream: true
     })
 
